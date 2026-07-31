@@ -169,29 +169,25 @@ try {
 
 Creates the editor instance. Pass it to `RichEditorProvider`.
 
-| Option                     | Type                           | Description                             |
-| -------------------------- | ------------------------------ | --------------------------------------- |
-| `initialContent`           | `string`, default `''`         | Initial HTML, read **once** on load.    |
-| `editable`                 | `boolean`, default `true`      | `false` = read-only viewer.             |
-| `autofocus`                | `boolean`, default `false`     | Focus the editor on load.               |
-| `locale`                   | `LocaleOption`, default `'en'` | `'en'`, `'vi'`, or a custom bundle.     |
-| `placeholder`              | `string`                       | Empty-document placeholder.             |
-| `keyboardOffset`           | `number`, default `60`         | Height reserved above the keyboard.     |
-| `debounceMs`               | `number`, default `300`        | Debounce for `onChange`.                |
-| `theme`                    | `RichThemePartial`             | See [Theming](#theming).                |
-| `labels`                   | `Partial<RichEditorLabels>`    | RN toolbar strings.                     |
-| `editorLabels`             | `Partial<EditorLabels>`        | In-WebView strings.                     |
-| `headingOptions`           | `HeadingOption[]`              | Heading menu entries (`0` = paragraph). |
-| `metrics`                  | `EditorMetrics`                | Image/table minimum sizes.              |
-| `onReady`                  | `(editor) => void`             | Fires once when the editor is ready.    |
-| `onChange`                 | `(html: string) => void`       | Debounced content changes.              |
-| `onFocusChanged`           | `(focused: boolean) => void`   | Editor focus/blur.                      |
-| `onStateChange`            | `(state) => void`              | Raw bridge state (advanced).            |
-| `onImageInteractionChange` | `(active, inCell) => void`     | An image was selected/deselected.       |
-
-Anything unset falls back to the resolved `locale` — that covers `placeholder`, `labels`,
-`editorLabels` and `headingOptions`. An unknown locale code falls back to English rather
-than throwing. See [Internationalization](#internationalization).
+| Option                                                  | Default      | Description                                                                                                                                                                  |
+| ------------------------------------------------------- | ------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `initialContent` (`string`)                             | `''`         | Initial HTML, read **once** on load. Pass a stable value.                                                                                                                    |
+| `editable` (`boolean`)                                  | `true`       | Set `false` for a read-only viewer. Toggling it at runtime is supported.                                                                                                     |
+| `autofocus` (`boolean`)                                 | `false`      | Focus the editor on load.                                                                                                                                                    |
+| `locale` (`LocaleOption`)                               | `'en'`       | Built-in code (`'en'`, `'vi'`) or a full custom bundle; an unknown code falls back to English. Drives every string below. See [Internationalization](#internationalization). |
+| `placeholder` (`string`)                                | locale's     | Empty-document placeholder. Overrides the locale's.                                                                                                                          |
+| `keyboardOffset` (`number`)                             | `60`         | Extra height reserved above the keyboard.                                                                                                                                    |
+| `debounceMs` (`number`)                                 | `300`        | Debounce for `onChange` (leading + trailing).                                                                                                                                |
+| `theme` (`RichThemePartial`)                            | `lightTheme` | See [Theming](#theming).                                                                                                                                                     |
+| `labels` (`Partial<RichEditorLabels>`)                  | locale's     | RN toolbar strings, merged over the locale's.                                                                                                                                |
+| `editorLabels` (`Partial<EditorLabels>`)                | locale's     | In-WebView strings (table menu, image caption), merged over the locale's.                                                                                                    |
+| `headingOptions` (`HeadingOption[]`)                    | locale's     | Entries of the top-bar heading menu (`value` 0 = paragraph).                                                                                                                 |
+| `metrics` (`EditorMetrics`)                             | see below    | Image/table minimum sizes.                                                                                                                                                   |
+| `onReady` (`(editor) => void`)                          | —            | Fires once when the editor is ready.                                                                                                                                         |
+| `onChange` (`(html: string) => void`)                   | —            | Debounced content changes.                                                                                                                                                   |
+| `onFocusChanged` (`(focused: boolean) => void`)         | —            | Editor focus/blur.                                                                                                                                                           |
+| `onStateChange` (`(state) => void`)                     | —            | Raw bridge state (advanced).                                                                                                                                                 |
+| `onImageInteractionChange` (`(active, inCell) => void`) | —            | An image was selected/deselected (e.g. to disable swipe-back).                                                                                                               |
 
 > `theme`, `labels`, `editorLabels`, `metrics`, `headingOptions` and a custom
 > `locale` object are compared by identity. Pass module-level constants or `useMemo`
@@ -207,11 +203,11 @@ yourself: `editor` (the tentap `EditorBridge`), `focusManager` (see
 Hosts the popover portal and distributes the editor, theme, labels, and icon
 renderer to `RichEditor` and the toolbars. Everything must live inside it.
 
-| Prop         | Type                               | Description                            |
-| ------------ | ---------------------------------- | -------------------------------------- |
-| `editor`     | `RichEditorInstance`               | From `useRichEditor`.                  |
-| `renderIcon` | `(name, size, color) => ReactNode` | Override the MaterialIcons renderer.   |
-| `children`   | `ReactNode`                        | Your `RichEditor` + toolbars + layout. |
+| Prop                                              | Description                                  |
+| ------------------------------------------------- | -------------------------------------------- |
+| `editor` (`RichEditorInstance`)                   | From `useRichEditor`.                        |
+| `renderIcon` (`(name, size, color) => ReactNode`) | Override the default MaterialIcons renderer. |
+| `children` (`ReactNode`)                          | Your `RichEditor` + toolbars + layout.       |
 
 ### `<RichEditor ref>`
 
@@ -233,31 +229,24 @@ interface RichEditorRef {
 
 ### `<RichEditorTopBar>`
 
-| Prop              | Type                                      | Description                                   |
-| ----------------- | ----------------------------------------- | --------------------------------------------- |
-| `onPickImage`     | `(fromCamera) => Promise<string \| null>` | Pick/upload, resolve to the src.              |
-| `features`        | `TopBarFeatureFlags`                      | Toggle built-in tools — see below.            |
-| `items`           | `ToolbarItem[]`                           | Custom buttons, appended after the built-ins. |
-| `headingOptions`  | `HeadingOption[]`                         | Overrides the heading menu for this bar.      |
-| `fontSizeOptions` | `number[]`                                | Default `[12,14,16,18,20,24,28,32]`.          |
-| `style`           | `StyleProp<ViewStyle>`                    | —                                             |
-
-Tools: `history` (undo **and** redo), `heading`, `fontSize`, `table`, `image`, `search`.
-
-`onPickImage` receives `true` when the camera was chosen. Resolve to `null` to cancel;
-the keyboard stays down until the promise settles, then the library inserts the image.
+| Prop                                                                            | Description                                                                                                                                             |
+| ------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `onPickImage` (`(fromCamera: boolean) => Promise<string \| null \| undefined>`) | Pick/upload an image and resolve to the src to insert (or `null` to cancel). The keyboard stays hidden until it settles; the library inserts the image. |
+| `features` (`TopBarFeatureFlags`)                                               | Toggle built-in tools (`history`, `heading`, `fontSize`, `table`, `image`, `search`). `history` covers undo **and** redo.                               |
+| `items` (`ToolbarItem[]`)                                                       | Custom buttons appended after the built-ins.                                                                                                            |
+| `headingOptions` (`HeadingOption[]`)                                            | Overrides the heading menu for this bar only. Defaults to the `headingOptions` resolved by `useRichEditor` (i.e. the locale's).                         |
+| `fontSizeOptions` (`number[]`)                                                  | Defaults to `[12,14,16,18,20,24,28,32]`.                                                                                                                |
+| `style` (`StyleProp<ViewStyle>`)                                                | —                                                                                                                                                       |
 
 ### `<RichEditorBottomBar>`
 
-| Prop              | Type                      | Description                                   |
-| ----------------- | ------------------------- | --------------------------------------------- |
-| `stickToKeyboard` | `boolean`, default `true` | Pin above the keyboard.                       |
-| `bottomOffset`    | `number`, default `0`     | Extra offset while the keyboard is open.      |
-| `features`        | `BottomBarFeatureFlags`   | Toggle built-in tools — see below.            |
-| `items`           | `ToolbarItem[]`           | Custom buttons, appended after the built-ins. |
-| `style`           | `StyleProp<ViewStyle>`    | —                                             |
-
-Tools: `taskList`, `color`, `format`, `link`, `list`, `align`, `selectAll`, `clearFormat`.
+| Prop                                 | Description                                                                                        |
+| ------------------------------------ | -------------------------------------------------------------------------------------------------- |
+| `stickToKeyboard` (`boolean`)        | Pin above the keyboard. Default `true`.                                                            |
+| `bottomOffset` (`number`)            | Extra bottom offset while the keyboard is open (e.g. a tab bar). Default `0`.                      |
+| `features` (`BottomBarFeatureFlags`) | Toggle tools (`taskList`, `color`, `format`, `link`, `list`, `align`, `selectAll`, `clearFormat`). |
+| `items` (`ToolbarItem[]`)            | Custom buttons appended after the built-ins.                                                       |
+| `style` (`StyleProp<ViewStyle>`)     | —                                                                                                  |
 
 ### Toolbar composition
 
