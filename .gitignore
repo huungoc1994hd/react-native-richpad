@@ -1,0 +1,25 @@
+# dependencies
+node_modules/
+webview/node_modules/
+
+# build output (published, not committed)
+lib/
+
+# packed tarballs
+*.tgz
+
+# logs / caches
+*.log
+npm-debug.*
+yarn-debug.*
+yarn-error.*
+.eslintcache
+
+# webview build intermediates (the committed artifact lives in src/webview/generated/)
+webview/dist/
+
+# os / editor
+.DS_Store
+*.pem
+.idea/
+.vscode/

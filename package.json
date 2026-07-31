@@ -1,0 +1,108 @@
+{
+  "name": "react-native-richpad",
+  "version": "0.2.0",
+  "description": "A WebView-based rich-text editor for React Native (iOS + Android) with tables, images, search, and a fully themeable toolbar.",
+  "source": "./src/index.ts",
+  "main": "./src/index.ts",
+  "module": "./src/index.ts",
+  "types": "./lib/typescript/src/index.d.ts",
+  "react-native": "./src/index.ts",
+  "files": [
+    "src",
+    "lib",
+    "README.md",
+    "!**/__tests__",
+    "!**/*.test.ts",
+    "!**/*.test.tsx"
+  ],
+  "sideEffects": false,
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint . && prettier --check .",
+    "lint:fix": "eslint . --fix && prettier --write .",
+    "build": "bob build",
+    "build:webview": "cd webview && npm ci && npm run build && node smoke-test.mjs",
+    "build:webview:offline": "cd webview && npm install --prefer-offline --no-audit --no-fund && npm run build && node smoke-test.mjs",
+    "verify:webview": "npm run build:webview:offline && git diff --exit-code -- src/webview/generated/editorHtml.ts",
+    "clean": "rm -rf lib",
+    "prepare": "bob build",
+    "prepublishOnly": "npm run verify:webview"
+  },
+  "keywords": [
+    "react-native",
+    "rich-text",
+    "editor",
+    "wysiwyg",
+    "tiptap",
+    "prosemirror",
+    "webview",
+    "ios",
+    "android"
+  ],
+  "license": "MIT",
+  "author": "Huu Ngoc Developer <ngoc.nh@zinza.com.vn>",
+  "repository": {
+    "type": "git",
+    "url": "git+https://lab.zinza.com.vn/ngocnh/react-native-richpad.git"
+  },
+  "homepage": "https://lab.zinza.com.vn/ngocnh/react-native-richpad#readme",
+  "bugs": {
+    "url": "https://lab.zinza.com.vn/ngocnh/react-native-richpad/-/issues"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "@10play/tentap-editor": "^1.0.1",
+    "@gorhom/portal": "^1.0.14"
+  },
+  "peerDependencies": {
+    "@react-native-async-storage/async-storage": ">=1.21.0",
+    "react": ">=19.1.0",
+    "react-native": ">=0.82.0",
+    "react-native-gesture-handler": ">=2.16.0",
+    "react-native-keyboard-controller": ">=1.12.0",
+    "react-native-linear-gradient": ">=2.8.0",
+    "react-native-reanimated": ">=3.10.0",
+    "react-native-vector-icons": ">=10.0.0",
+    "react-native-webview": ">=13.0.0"
+  },
+  "react-native-builder-bob": {
+    "source": "src",
+    "output": "lib",
+    "targets": [
+      [
+        "typescript",
+        {
+          "project": "tsconfig.build.json"
+        }
+      ]
+    ]
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.39.5",
+    "@react-native-async-storage/async-storage": "^2.2.0",
+    "@types/react": "^19.2.17",
+    "@types/react-native-vector-icons": "^6.4.18",
+    "@typescript-eslint/eslint-plugin": "^8.65.0",
+    "@typescript-eslint/parser": "^8.65.0",
+    "eslint": "^9.39.5",
+    "eslint-plugin-prettier": "^5.5.6",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "prettier": "^3.9.6",
+    "react": "^19.1.1",
+    "react-native": "^0.82.1",
+    "react-native-builder-bob": "^0.43.0",
+    "react-native-gesture-handler": "^2.32.0",
+    "react-native-keyboard-controller": "^1.22.2",
+    "react-native-linear-gradient": "^2.8.3",
+    "react-native-reanimated": "^4.3.2",
+    "react-native-vector-icons": "^10.3.0",
+    "react-native-webview": "^13.17.0",
+    "react-native-worklets": "^0.8.3",
+    "typescript": "^5.9.3"
+  }
+}

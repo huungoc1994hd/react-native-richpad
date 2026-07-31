@@ -1,0 +1,206 @@
+/*
+ * Base styles for the WebView editor.
+ * Themed at runtime via CSS variables (set by ConfigBridge on InitConfig) — see
+ * the --editor-* variables below; each maps to an EditorTheme / EditorMetrics field.
+ */
+
+/* Pre-InitConfig fallbacks. Paired with the `editor` block of `lightTheme` in
+   src/theme/defaults.ts, except --editor-table-min-cell-width which pairs with
+   DEFAULT_METRICS in webview/configStore.ts — keep them in step. */
+:root {
+  --editor-accent: #3b82f6;
+  --editor-accent-soft: rgba(59, 130, 246, 0.1);
+  --editor-accent-outline: rgba(59, 130, 246, 0.45);
+  --editor-font-size: 16px;
+  --editor-font-family:
+    -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif,
+    'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol';
+  --editor-background-color: #ffffff;
+  --editor-text-color: #111827;
+  --editor-placeholder-color: #adb5bd;
+  --editor-table-border-color: #ced4da;
+  --editor-table-header-bg: #f1f3f5;
+  --editor-caption-color: #6b7280;
+  --editor-search-highlight-bg: rgba(250, 204, 21, 0.4);
+  --editor-search-active-bg: rgba(245, 158, 11, 0.55);
+  --editor-table-min-cell-width: 70px;
+  /* Chrome of the WebView overlays (table popover, handles, image toolbar). */
+  --editor-surface: #ffffff;
+  --editor-border: #d1d5db;
+  --editor-icon: #4b5563;
+  --editor-muted: #6b7280;
+  --editor-divider: #e5e7eb;
+  --editor-danger: #ff3b30;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  font-family: var(--editor-font-family);
+  /* An explicit default size — text without a font-size mark renders at this
+     size, matching the default number shown on the RN toolbar. */
+  font-size: var(--editor-font-size);
+  color: var(--editor-text-color);
+  background-color: var(--editor-background-color);
+}
+
+.ProseMirror,
+.ProseMirror > .is-empty:first-child::before {
+  font-family: inherit;
+}
+
+#root > div:nth-of-type(1) {
+  position: absolute;
+  height: 100%;
+  overflow-x: hidden;
+  overflow-y: auto;
+  width: 100%;
+  top: 0;
+  bottom: 0;
+  background-color: var(--editor-background-color);
+}
+#root div .ProseMirror {
+  min-height: 100%;
+  overflow: visible;
+  outline: none;
+  /* padding-top 20px: headroom for the overlay of the FIRST node in the doc — an
+     image's corner handle and its ⏎ badge poke ~12px above the node edge. */
+  padding: 20px 18px 10px;
+  box-sizing: border-box;
+}
+
+.tableWrapper {
+  overflow-x: auto;
+  overflow-y: hidden;
+  margin: 0;
+  /* Headroom for the column and resize handles, which TableHandles portals into
+     this wrapper above the table's top edge. */
+  padding-top: 18px;
+  padding-bottom: 18px;
+  position: relative;
+}
+.ProseMirror table {
+  border-collapse: collapse;
+  table-layout: fixed;
+  width: 100%;
+  margin: 0;
+}
+.ProseMirror table td,
+.ProseMirror table th {
+  min-width: var(--editor-table-min-cell-width, 70px);
+  border: 1px solid var(--editor-table-border-color);
+  padding: 7px 4px;
+  vertical-align: top;
+  box-sizing: border-box;
+  position: relative;
+}
+.ProseMirror table p {
+  margin: 0;
+  min-height: 24px;
+}
+.ProseMirror table th {
+  font-weight: bold;
+  text-align: left;
+  background-color: var(--editor-table-header-bg);
+}
+.ProseMirror.resize-cursor {
+  cursor: ew-resize;
+  cursor: col-resize;
+}
+/* Placeholder for ANY block at the start of the doc (p, h1-h6, …).
+   Uses the `is-empty` class (attached to EACH empty node holding the cursor), NOT
+   `is-editor-empty` (attached only when the WHOLE editor is empty — switching to a
+   heading makes TrailingNode append a trailing paragraph, so the editor is no
+   longer "empty", the class disappears and the placeholder wrongly turns off).
+   Because of that same trailing paragraph, do NOT guard this rule with
+   :only-child — the first node then never is one, and the placeholder would die.
+   Font size: inherits the node (headings grow on their own) or follows the stored
+   mark font-size that PlaceholderStyleSync mirrors into --editor-placeholder-font-size. */
+.ProseMirror > .is-empty:first-child::before {
+  content: attr(data-placeholder);
+  float: left;
+  color: var(--editor-placeholder-color);
+  pointer-events: none;
+  height: 0;
+  font-size: var(--editor-placeholder-font-size, inherit);
+}
+.ProseMirror table .is-empty::before,
+.ProseMirror table .is-editor-empty::before {
+  content: none !important;
+  display: none !important;
+}
+.tableWrapper::before,
+table.is-editor-empty::before {
+  content: none !important;
+  display: none !important;
+}
+ul[data-type='taskList'] {
+  list-style: none;
+  padding: 0;
+}
+ul[data-type='taskList'] p {
+  margin: 0;
+}
+ul[data-type='taskList'] li {
+  display: flex;
+  align-items: flex-start;
+  margin-bottom: 8px;
+}
+ul[data-type='taskList'] li > label {
+  flex: 0 0 auto;
+  margin-right: 0.5rem;
+  user-select: none;
+  padding-top: 2px;
+}
+ul[data-type='taskList'] li > div {
+  flex: 1 1 auto;
+}
+
+/* ===== Image toolkit ===== */
+.ProseMirror img {
+  display: block; /* so margin:auto centering / alignment works */
+  height: auto;
+  max-width: 100%;
+  /* Block WebKit's native drag: PM sets draggable=true on the selected node → a
+     touch on the image (drifting off the handle) makes iOS start a drag-and-drop
+     session, the ghost sticks to the finger and swallows all touchmove (the
+     resize preview freezes until the finger is lifted). */
+  -webkit-user-drag: none;
+}
+.ProseMirror figure {
+  -webkit-user-drag: none;
+  margin: 12px 0;
+  max-width: 100%;
+}
+.ProseMirror img.ProseMirror-selectednode,
+.ProseMirror figure.ProseMirror-selectednode img,
+.ProseMirror figure img.ProseMirror-selectednode {
+  /* A FAINT outline (45% alpha, precomputed — not color-mix, whose fallback the
+     minifier collapses) — the corner handle is the main cue, the outline only
+     hints at the selection. */
+  outline: 1.5px solid var(--editor-accent-outline);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+.ProseMirror figure img {
+  width: 100%;
+  margin: 0;
+}
+.ProseMirror figcaption {
+  font-size: 13px;
+  line-height: 1.4;
+  color: var(--editor-caption-color);
+  font-style: italic;
+  text-align: center;
+  margin-top: 6px;
+  position: relative;
+}
+.ProseMirror figcaption:empty::before,
+.ProseMirror figcaption:has(> br.ProseMirror-trailingBreak:only-child)::before {
+  content: attr(data-placeholder);
+  color: var(--editor-placeholder-color);
+  pointer-events: none;
+  position: absolute;
+  left: 0;
+  right: 0;
+}
