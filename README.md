@@ -37,18 +37,16 @@ npm install react-native-webview react-native-reanimated \
 > Note: the `tentap` namespace re-export means Metro bundles tentap with the library
 > either way — importing from it adds no extra weight.
 
-| Package                                            | Used for                                   |
-| -------------------------------------------------- | ------------------------------------------ |
-| `react` ≥ 19.1, `react-native` ≥ 0.82              | New Architecture required — see below      |
-| `react-native-webview` ≥ 13                        | Hosts the bundled tiptap engine            |
-| `react-native-reanimated` ≥ 3.10                   | Toolbar/popover animations (v3 and v4)     |
-| `react-native-keyboard-controller` ≥ 1.12          | Keyboard events + sticky bottom bar        |
-| `react-native-vector-icons` ≥ 10                   | Default icons (override with `renderIcon`) |
-| `react-native-gesture-handler` ≥ 2.16              | Color spectrum, table size wheel           |
-| `react-native-linear-gradient` ≥ 2.8               | Color picker gradients                     |
-| `@react-native-async-storage/async-storage` ≥ 1.21 | Recent-colors history                      |
-
-All of them are required.
+| Package                                            | Required | Used for                                                 |
+| -------------------------------------------------- | -------- | -------------------------------------------------------- |
+| `react` ≥ 19.1, `react-native` ≥ 0.82              | ✅       | New Architecture required — see the note below the table |
+| `react-native-webview` ≥ 13                        | ✅       | Renders the editor (host for the bundled tiptap engine)  |
+| `react-native-reanimated` ≥ 3.10                   | ✅       | Toolbar/popover animations (v3 and v4 supported)         |
+| `react-native-keyboard-controller` ≥ 1.12          | ✅       | Keyboard events + sticky bottom bar                      |
+| `react-native-vector-icons` ≥ 10                   | ✅       | Default toolbar icons (override with `renderIcon`)       |
+| `react-native-gesture-handler` ≥ 2.16              | ✅       | Color picker spectrum, table size wheel                  |
+| `react-native-linear-gradient` ≥ 2.8               | ✅       | Color picker gradients                                   |
+| `@react-native-async-storage/async-storage` ≥ 1.21 | ✅       | Color picker recent-colors history                       |
 
 Follow each library's own native setup (pods on iOS, autolinking on Android,
 fonts for `react-native-vector-icons`).
@@ -203,11 +201,11 @@ yourself: `editor` (the tentap `EditorBridge`), `focusManager` (see
 Hosts the popover portal and distributes the editor, theme, labels, and icon
 renderer to `RichEditor` and the toolbars. Everything must live inside it.
 
-| Prop                                              | Description                                  |
-| ------------------------------------------------- | -------------------------------------------- |
-| `editor` (`RichEditorInstance`)                   | From `useRichEditor`.                        |
-| `renderIcon` (`(name, size, color) => ReactNode`) | Override the default MaterialIcons renderer. |
-| `children` (`ReactNode`)                          | Your `RichEditor` + toolbars + layout.       |
+| Prop         | Type                               | Description                                  |
+| ------------ | ---------------------------------- | -------------------------------------------- |
+| `editor`     | `RichEditorInstance`               | From `useRichEditor`.                        |
+| `renderIcon` | `(name, size, color) => ReactNode` | Override the default MaterialIcons renderer. |
+| `children`   | `ReactNode`                        | Your `RichEditor` + toolbars + layout.       |
 
 ### `<RichEditor ref>`
 
@@ -229,24 +227,24 @@ interface RichEditorRef {
 
 ### `<RichEditorTopBar>`
 
-| Prop                                                                            | Description                                                                                                                                             |
-| ------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `onPickImage` (`(fromCamera: boolean) => Promise<string \| null \| undefined>`) | Pick/upload an image and resolve to the src to insert (or `null` to cancel). The keyboard stays hidden until it settles; the library inserts the image. |
-| `features` (`TopBarFeatureFlags`)                                               | Toggle built-in tools (`history`, `heading`, `fontSize`, `table`, `image`, `search`). `history` covers undo **and** redo.                               |
-| `items` (`ToolbarItem[]`)                                                       | Custom buttons appended after the built-ins.                                                                                                            |
-| `headingOptions` (`HeadingOption[]`)                                            | Overrides the heading menu for this bar only. Defaults to the `headingOptions` resolved by `useRichEditor` (i.e. the locale's).                         |
-| `fontSizeOptions` (`number[]`)                                                  | Defaults to `[12,14,16,18,20,24,28,32]`.                                                                                                                |
-| `style` (`StyleProp<ViewStyle>`)                                                | —                                                                                                                                                       |
+| Prop              | Type                                                            | Description                                                                                                                                             |
+| ----------------- | --------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `onPickImage`     | `(fromCamera: boolean) => Promise<string \| null \| undefined>` | Pick/upload an image and resolve to the src to insert (or `null` to cancel). The keyboard stays hidden until it settles; the library inserts the image. |
+| `features`        | `TopBarFeatureFlags`                                            | Toggle built-in tools (`history`, `heading`, `fontSize`, `table`, `image`, `search`). `history` covers undo **and** redo.                               |
+| `items`           | `ToolbarItem[]`                                                 | Custom buttons appended after the built-ins.                                                                                                            |
+| `headingOptions`  | `HeadingOption[]`                                               | Overrides the heading menu for this bar only. Defaults to the `headingOptions` resolved by `useRichEditor` (i.e. the locale's).                         |
+| `fontSizeOptions` | `number[]`                                                      | Defaults to `[12,14,16,18,20,24,28,32]`.                                                                                                                |
+| `style`           | `StyleProp<ViewStyle>`                                          | —                                                                                                                                                       |
 
 ### `<RichEditorBottomBar>`
 
-| Prop                                 | Description                                                                                        |
-| ------------------------------------ | -------------------------------------------------------------------------------------------------- |
-| `stickToKeyboard` (`boolean`)        | Pin above the keyboard. Default `true`.                                                            |
-| `bottomOffset` (`number`)            | Extra bottom offset while the keyboard is open (e.g. a tab bar). Default `0`.                      |
-| `features` (`BottomBarFeatureFlags`) | Toggle tools (`taskList`, `color`, `format`, `link`, `list`, `align`, `selectAll`, `clearFormat`). |
-| `items` (`ToolbarItem[]`)            | Custom buttons appended after the built-ins.                                                       |
-| `style` (`StyleProp<ViewStyle>`)     | —                                                                                                  |
+| Prop              | Type                    | Description                                                                                        |
+| ----------------- | ----------------------- | -------------------------------------------------------------------------------------------------- |
+| `stickToKeyboard` | `boolean`               | Pin above the keyboard. Default `true`.                                                            |
+| `bottomOffset`    | `number`                | Extra bottom offset while the keyboard is open (e.g. a tab bar). Default `0`.                      |
+| `features`        | `BottomBarFeatureFlags` | Toggle tools (`taskList`, `color`, `format`, `link`, `list`, `align`, `selectAll`, `clearFormat`). |
+| `items`           | `ToolbarItem[]`         | Custom buttons appended after the built-ins.                                                       |
+| `style`           | `StyleProp<ViewStyle>`  | —                                                                                                  |
 
 ### Toolbar composition
 
