@@ -43,11 +43,11 @@
   "author": "Huu Ngoc Developer <ngoc.nh@zinza.com.vn>",
   "repository": {
     "type": "git",
-    "url": "git+https://lab.zinza.com.vn/ngocnh/react-native-richpad.git"
+    "url": "git+https://github.com/huungoc1994hd/react-native-richpad.git"
   },
-  "homepage": "https://lab.zinza.com.vn/ngocnh/react-native-richpad#readme",
+  "homepage": "https://github.com/huungoc1994hd/react-native-richpad#readme",
   "bugs": {
-    "url": "https://lab.zinza.com.vn/ngocnh/react-native-richpad/-/issues"
+    "url": "https://github.com/huungoc1994hd/react-native-richpad/issues"
   },
   "publishConfig": {
     "access": "public"

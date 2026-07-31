@@ -37,16 +37,16 @@ npm install react-native-webview react-native-reanimated \
 > Note: the `tentap` namespace re-export means Metro bundles tentap with the library
 > either way — importing from it adds no extra weight.
 
-| Package                                            | Required | Used for                                                |
-| -------------------------------------------------- | -------- | ------------------------------------------------------- |
-| `react` ≥ 19.1, `react-native` ≥ 0.82              | ✅       | See "React Native floor" below                          |
-| `react-native-webview` ≥ 13                        | ✅       | Renders the editor (host for the bundled tiptap engine) |
-| `react-native-reanimated` ≥ 3.10                   | ✅       | Toolbar/popover animations (v3 and v4 supported)        |
-| `react-native-keyboard-controller` ≥ 1.12          | ✅       | Keyboard events + sticky bottom bar                     |
-| `react-native-vector-icons` ≥ 10                   | ✅       | Default toolbar icons (override with `renderIcon`)      |
-| `react-native-gesture-handler` ≥ 2.16              | ✅       | Color picker spectrum, table size wheel                 |
-| `react-native-linear-gradient` ≥ 2.8               | ✅       | Color picker gradients                                  |
-| `@react-native-async-storage/async-storage` ≥ 1.21 | ✅       | Color picker recent-colors history                      |
+| Package                                            | Required | Used for                                                 |
+| -------------------------------------------------- | -------- | -------------------------------------------------------- |
+| `react` ≥ 19.1, `react-native` ≥ 0.82              | ✅       | New Architecture required — see the note below the table |
+| `react-native-webview` ≥ 13                        | ✅       | Renders the editor (host for the bundled tiptap engine)  |
+| `react-native-reanimated` ≥ 3.10                   | ✅       | Toolbar/popover animations (v3 and v4 supported)         |
+| `react-native-keyboard-controller` ≥ 1.12          | ✅       | Keyboard events + sticky bottom bar                      |
+| `react-native-vector-icons` ≥ 10                   | ✅       | Default toolbar icons (override with `renderIcon`)       |
+| `react-native-gesture-handler` ≥ 2.16              | ✅       | Color picker spectrum, table size wheel                  |
+| `react-native-linear-gradient` ≥ 2.8               | ✅       | Color picker gradients                                   |
+| `@react-native-async-storage/async-storage` ≥ 1.21 | ✅       | Color picker recent-colors history                       |
 
 Follow each library's own native setup (pods on iOS, autolinking on Android,
 fonts for `react-native-vector-icons`).
