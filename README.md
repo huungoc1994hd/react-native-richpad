@@ -123,7 +123,7 @@ export function NoteEditor() {
   const editorRef = useRef<RichEditorRef>(null);
 
   const editor = useRichEditor({
-    initialContent: '<p>Hello 👋</p>',
+    initialContent: '<p>Hello world</p>',
     autofocus: true,
     placeholder: 'Start writing…',
     onChange: html => console.log('content changed', html),
