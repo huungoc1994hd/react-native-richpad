@@ -468,12 +468,13 @@ export const RichEditorBottomBar = ({
                   <View style={styles.colorTriggerIconGlyph}>
                     <RichIcon name="format-color-fill" size={24} color={theme.toolbar.icon} />
                   </View>
-                  {/* Falls back to the divider tint rather than to nothing: an invisible
-                      swatch reads as a broken icon, while a neutral one reads as "no fill". */}
+                  {/* With no highlight the swatch shows the document's own background —
+                      the color the text actually sits on. It reads against the toolbar
+                      because the bar and the document use different surfaces. */}
                   <View
                     style={[
                       styles.colorTriggerBar,
-                      { backgroundColor: currentHighlightColor || theme.toolbar.divider },
+                      { backgroundColor: currentHighlightColor || theme.editor.backgroundColor },
                     ]}
                   />
                 </View>
