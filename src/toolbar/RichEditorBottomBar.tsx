@@ -439,7 +439,11 @@ export const RichEditorBottomBar = ({
             trigger={(triggerProps, isOpen) => (
               <ToolbarTrigger onPress={triggerProps.onPress} isActive={isOpen}>
                 <View style={styles.colorTriggerInner}>
-                  <Text style={[styles.colorTriggerLetter, { color: theme.toolbar.icon }]}>A</Text>
+                  <View style={styles.colorTriggerGlyph}>
+                    <Text style={[styles.colorTriggerLetter, { color: theme.toolbar.icon }]}>
+                      A
+                    </Text>
+                  </View>
                   <View style={[styles.colorTriggerBar, { backgroundColor: currentTextColor }]} />
                 </View>
               </ToolbarTrigger>
@@ -465,7 +469,7 @@ export const RichEditorBottomBar = ({
                 accessibilityLabel={labels.highlightColorTitle}
               >
                 <View style={styles.colorTriggerInner}>
-                  <View style={styles.colorTriggerIconGlyph}>
+                  <View style={styles.colorTriggerGlyph}>
                     <RichIcon name="format-color-fill" size={24} color={theme.toolbar.icon} />
                   </View>
                   {/* With no highlight the swatch shows the document's own background —
@@ -773,10 +777,13 @@ const styles = StyleSheet.create({
     padding: 4,
     borderRadius: 999,
   },
+  // 25 = glyph 20 + bar marginTop 1 + bar 4. An inner box shorter than its
+  // contents centers the overflow onto half-pixel rows, which anti-aliases the
+  // swatch into looking thicker than it is.
   colorTriggerInner: {
     alignItems: 'center',
     justifyContent: 'center',
-    height: 24,
+    height: 25,
     paddingHorizontal: 8,
   },
   colorTriggerLetter: {
@@ -784,7 +791,10 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     lineHeight: 20,
   },
-  colorTriggerIconGlyph: {
+  // Both triggers put their glyph in this box, so each swatch is positioned by
+  // the same explicit height. Laying the letter out by its own text metrics
+  // instead would round to a different subpixel than the icon's box.
+  colorTriggerGlyph: {
     height: 20,
     overflow: 'hidden',
     alignItems: 'center',
