@@ -440,13 +440,7 @@ export const RichEditorBottomBar = ({
               <ToolbarTrigger onPress={triggerProps.onPress} isActive={isOpen}>
                 <View style={styles.colorTriggerInner}>
                   <Text style={[styles.colorTriggerLetter, { color: theme.toolbar.icon }]}>A</Text>
-                  <View
-                    style={[
-                      styles.colorTriggerBar,
-                      styles.colorTriggerBarText,
-                      { backgroundColor: currentTextColor },
-                    ]}
-                  />
+                  <View style={[styles.colorTriggerBar, { backgroundColor: currentTextColor }]} />
                 </View>
               </ToolbarTrigger>
             )}
@@ -474,13 +468,12 @@ export const RichEditorBottomBar = ({
                   <View style={styles.colorTriggerIconGlyph}>
                     <RichIcon name="format-color-fill" size={24} color={theme.toolbar.icon} />
                   </View>
-                  {/* "No highlight" must blend in. transparent, not a surface color:
-                      the trigger paints its own background while the popover is open. */}
+                  {/* Falls back to the divider tint rather than to nothing: an invisible
+                      swatch reads as a broken icon, while a neutral one reads as "no fill". */}
                   <View
                     style={[
                       styles.colorTriggerBar,
-                      styles.colorTriggerBarFill,
-                      { backgroundColor: currentHighlightColor || 'transparent' },
+                      { backgroundColor: currentHighlightColor || theme.toolbar.divider },
                     ]}
                   />
                 </View>
@@ -796,15 +789,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'flex-start',
   },
+  // One width for both swatches: the two triggers sit side by side, so unequal
+  // bars read as unequal thickness even though the height is shared.
   colorTriggerBar: {
     height: 4,
+    width: 22,
     marginTop: 1,
-  },
-  colorTriggerBarText: {
-    width: 20,
-  },
-  colorTriggerBarFill: {
-    width: 24,
   },
   colorMenu: {
     gap: 12,
