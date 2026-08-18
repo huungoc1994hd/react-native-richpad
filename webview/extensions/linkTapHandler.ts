@@ -1,12 +1,10 @@
 import { Extension } from '@tiptap/core';
 import { Plugin, PluginKey } from '@tiptap/pm/state';
-import { createTextSelectionAt } from './figure';
+import { createTextSelectionAt } from './pmSelection';
 
 /**
- * Tap a LINK → cursor INSIDE it. A plain tap drops the caret at the END of the
- * link, outside the mark (inclusive=false), so the link button cannot recognize
- * it to prefill edit/delete. The hit target is the whole <a>, far easier to hit
- * than a precise character.
+ * Tap a LINK → cursor INSIDE it. A plain tap lands at the end, outside the mark, so
+ * the link button cannot prefill edit/delete.
  */
 export const LinkTapHandler = Extension.create({
   name: 'linkTapHandler',

@@ -1,10 +1,8 @@
 import { StyleSheet } from 'react-native';
 
 /**
- * A 24pt icon in 6pt of padding is a 36pt target — under the 44pt/48dp minimum, so
- * every toolbar control extends it vertically. Vertical ONLY: controls sit 0-4pt
- * apart in a row, and horizontal slop would reach into the neighbour's painted box
- * and steal taps aimed at its icon.
+ * A 24pt icon in 6pt padding is under the 44pt minimum target. Vertical ONLY:
+ * controls sit 0-4pt apart, and horizontal slop would steal a neighbour's taps.
  */
 export const TOOLBAR_HIT_SLOP = { top: 8, bottom: 8 } as const;
 

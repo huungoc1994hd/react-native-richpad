@@ -1,7 +1,6 @@
 /*
- * Base styles for the WebView editor.
- * Themed at runtime via CSS variables (set by ConfigBridge on InitConfig) — see
- * the --editor-* variables below; each maps to an EditorTheme / EditorMetrics field.
+ * Base styles for the WebView editor. Themed at runtime through the --editor-*
+ * variables, each mapping to an EditorTheme / EditorMetrics field.
  */
 
 /* Pre-InitConfig fallbacks. Paired with the `editor` block of `lightTheme` in
@@ -49,15 +48,19 @@ body {
   font-family: inherit;
 }
 
+/* The scroll container ends where the editing area really ends. min() of two
+   independent limits, never a sum — see syncVisibleHeight and quirk 21. */
 #root > div:nth-of-type(1) {
   position: absolute;
-  height: 100%;
   overflow-x: hidden;
   overflow-y: auto;
   width: 100%;
   top: 0;
-  bottom: 0;
+  height: min(calc(100% - var(--editor-chrome, 0px)), var(--editor-visible-strip, 100%));
   background-color: var(--editor-background-color);
+  /* Overscrolling must not chain to the page: the leftover strip below this
+     container is pannable, and Chromium moves the visual viewport onto it (quirk 22). */
+  overscroll-behavior: contain;
 }
 #root div .ProseMirror {
   min-height: 100%;
@@ -67,6 +70,21 @@ body {
      image's corner handle and its ⏎ badge poke ~12px above the node edge. */
   padding: 20px 18px 10px;
   box-sizing: border-box;
+}
+/* Room past the last line, matching CURSOR_MARGIN_BOTTOM. A spacer, not
+   padding-bottom: tentap writes that inline on Android and would erase it. */
+#root div .ProseMirror::after {
+  content: '';
+  display: block;
+  height: 60px;
+}
+
+/* Selected text keeps its colour: Chromium paints the platform pair Highlight /
+   HighlightText, and on Android HighlightText is opaque black (quirk 17). The :not()
+   keeps this disjoint from PM's hideselection rule, which must still win. */
+html.android .ProseMirror:not(.ProseMirror-hideselection) ::selection {
+  background-color: Highlight;
+  color: currentColor;
 }
 
 .tableWrapper {
@@ -107,16 +125,15 @@ body {
   cursor: ew-resize;
   cursor: col-resize;
 }
-/* Placeholder for ANY block at the start of the doc (p, h1-h6, …).
-   Uses the `is-empty` class (attached to EACH empty node holding the cursor), NOT
-   `is-editor-empty` (attached only when the WHOLE editor is empty — switching to a
-   heading makes TrailingNode append a trailing paragraph, so the editor is no
-   longer "empty", the class disappears and the placeholder wrongly turns off).
-   Because of that same trailing paragraph, do NOT guard this rule with
-   :only-child — the first node then never is one, and the placeholder would die.
-   Font size: inherits the node (headings grow on their own) or follows the stored
-   mark font-size that PlaceholderStyleSync mirrors into --editor-placeholder-font-size. */
-.ProseMirror > .is-empty:first-child::before {
+/* Neutralises tentap's runtime placeholder rule, which paints over the line above
+   a table because tiptap counts a table of empty cells as an empty document. */
+.ProseMirror > .is-editor-empty:first-child::before {
+  content: none;
+}
+/* The ONLY source of the placeholder: an EFFECTIVELY EMPTY doc — an empty first node
+   followed at most by TrailingNode's empty paragraph. Needs showOnlyCurrent:false. */
+.ProseMirror > .is-empty:first-child:last-child::before,
+.ProseMirror > .is-empty:first-child:has(+ .is-empty:last-child)::before {
   content: attr(data-placeholder);
   float: left;
   color: var(--editor-placeholder-color);
@@ -156,21 +173,38 @@ ul[data-type='taskList'] li > div {
   flex: 1 1 auto;
 }
 
-/* ===== Image toolkit ===== */
 .ProseMirror img {
   display: block; /* so margin:auto centering / alignment works */
   height: auto;
   max-width: 100%;
-  /* Block WebKit's native drag: PM sets draggable=true on the selected node → a
-     touch on the image (drifting off the handle) makes iOS start a drag-and-drop
-     session, the ghost sticks to the finger and swallows all touchmove (the
-     resize preview freezes until the finger is lifted). */
+  /* PM sets draggable=true on the selected node, and WebKit's drag session then
+     swallows every touchmove, freezing the resize preview. */
   -webkit-user-drag: none;
 }
 .ProseMirror figure {
   -webkit-user-drag: none;
   margin: 12px 0;
   max-width: 100%;
+}
+/* In a table cell the figure sits flush: cells are cramped, and this matches
+   the layout in-cell images always had. */
+.ProseMirror td figure,
+.ProseMirror th figure {
+  margin: 0;
+}
+/* An image under a NodeSelection must not carry selection paint; iOS ignores PM's
+   stock rule (quirk 12). Chromium must keep it selectable or the IME closes. */
+html.ios .ProseMirror.ProseMirror-hideselection img {
+  -webkit-user-select: none;
+  user-select: none;
+}
+/* Both halves of quirk 12: hide the root's own image-height caret, which PM's
+   descendant rule cannot reach, then win caret-color back for the caption. */
+.ProseMirror.ProseMirror-hideselection {
+  caret-color: transparent;
+}
+.ProseMirror figcaption[contenteditable='true'] {
+  caret-color: auto;
 }
 .ProseMirror img.ProseMirror-selectednode,
 .ProseMirror figure.ProseMirror-selectednode img,
@@ -196,11 +230,19 @@ ul[data-type='taskList'] li > div {
   position: relative;
 }
 .ProseMirror figcaption:empty::before,
-.ProseMirror figcaption:has(> br.ProseMirror-trailingBreak:only-child)::before {
+.ProseMirror figcaption:has(> br:only-child)::before {
   content: attr(data-placeholder);
   color: var(--editor-placeholder-color);
   pointer-events: none;
   position: absolute;
   left: 0;
   right: 0;
+}
+/* The caption is its own editing host (figcaption[contenteditable] inside a
+   cE=false figure shell): logically single-line plain text, visually wrapping. */
+.ProseMirror figcaption[contenteditable='true'] {
+  outline: none;
+  white-space: pre-wrap;
+  word-break: break-word;
+  -webkit-tap-highlight-color: transparent;
 }

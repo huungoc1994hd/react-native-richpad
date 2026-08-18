@@ -1,9 +1,6 @@
 /**
- * Bundles the WebView editor into a single .ts file that exports the HTML string.
- * Runs after `vite build` (see the "build" script in package.json).
- *
- * Output: ../src/webview/generated/editorHtml.ts — the committed build artifact
- * the React Native layer imports as the tentap `customSource`.
+ * Bundles the WebView editor into src/webview/generated/editorHtml.ts, the committed
+ * artifact the React Native layer imports as tentap's `customSource`.
  */
 const fs = require('fs');
 const path = require('path');

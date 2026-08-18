@@ -11,8 +11,6 @@ const iconProps = {
   strokeLinejoin: 'round' as const,
 };
 
-// ===== Table popover (TableHandles) =====
-
 /** Table popover button styles + `.table-popover-icon` glyphs; injected by TableHandles. */
 export const tablePopoverCss = `
         .table-popover-button {
@@ -97,8 +95,6 @@ export const TableTrashIcon = () => (
     <line x1="14" y1="11" x2="14" y2="17"></line>
   </svg>
 );
-
-// ===== Image toolbar (ImageHandles) =====
 
 export const AlignLeftIcon = () => (
   <svg {...iconProps}>

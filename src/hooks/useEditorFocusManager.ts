@@ -7,17 +7,8 @@ import { setBlurAckListener, clearBlurAckListener } from '../bridges/customBridg
 const IS_ANDROID = Platform.OS === 'android';
 
 /**
- * Internal. Focuses the hidden native input that raises the Android soft
- * keyboard, then hands the input connection to the WebView. Wired by RichEditor.
- *
- * Android calls `InputMethodManager.showSoftInput` only for a real user touch or
- * when a NATIVE input view takes focus; a programmatic focus (DOM, or even
- * `webView.requestFocus()`) moves the caret and nothing more, and
- * `keyboardDisplayRequiresUserAction` is iOS-only. An RN `TextInput` is the one
- * trigger reachable from JS — same workaround tentap uses for its autofocus.
- *
- * A LIFO registry, not one slot: the newest registration owns the IME and
- * clearing hands ownership back, so an editor outliving another keeps it.
+ * Internal. Focuses the hidden native input that raises the Android IME (quirk 10).
+ * A LIFO registry: the newest registration owns it, clearing hands ownership back.
  */
 const imeOpenerListeners: (() => void)[] = [];
 export const setImeOpenerListener = (listener: () => void) => {
@@ -33,10 +24,29 @@ export const clearImeOpenerListener = (listener: () => void) => {
 };
 
 /**
- * Settle delay before refocusing; absorbs jitter between native events. Stays
- * short because chained overlays (popover → picker) are already prevented
- * structurally, by suspending the next reason at the moment of the tap.
+ * Pending invitation for the opener's onFocus: Android's focus search can land on
+ * that always-mounted TextInput uninvited, and such a focus must not run the dance.
  */
+let imeOpenInvited = false;
+
+/**
+ * Raise the Android IME for input areas that are not the main contenteditable (an
+ * image caption): a programmatic DOM focus does not open it there (quirk 10).
+ */
+export const openAndroidIme = () => {
+  const listener = imeOpenerListeners[imeOpenerListeners.length - 1];
+  if (!listener) return;
+  imeOpenInvited = true;
+  listener();
+};
+
+export const consumeImeOpenInvitation = (): boolean => {
+  const invited = imeOpenInvited;
+  imeOpenInvited = false;
+  return invited;
+};
+
+/** Settle delay before refocusing; absorbs jitter between native events. */
 const REFOCUS_DELAY_MS = 80;
 
 /**
@@ -50,45 +60,52 @@ export const FocusSuspendReason = {
   ImageMenu: 'image-menu',
   ImagePicking: 'image-picking',
   TableSheet: 'table-sheet',
-  /** An in-document image is selected (image toolkit open) — the keyboard must close. */
+  /**
+   * Deprecated, exported for API compatibility. Selecting an image keeps the
+   * editor's input session, so the library never passes this reason.
+   */
   ImageToolkit: 'image-toolkit',
 } as const;
 
+/** Where a focus request lands; null keeps the caret where it already is. */
+export type FocusPosition = 'start' | 'end' | number | null;
+
 export type EditorFocusManager = {
   /**
-   * Yield the keyboard to an interaction (sheet/popover/system picker); the
-   * first suspend blurs the editor. Reasons are a SET, not a refcount, so
-   * overlapping overlays never refocus early.
+   * Yield the keyboard to an interaction; the first suspend blurs the editor.
+   * Reasons are a SET, so overlapping overlays never refocus early.
    */
   suspend: (reason: string) => void;
   /**
-   * End an interaction. Refocuses the editor once NO reason is left active; pass
-   * `{ refocus: false }` to keep the keyboard hidden. Idempotent, so an "early"
-   * resume and a "final" one may coexist.
+   * End an interaction. Refocuses once NO reason is left; `{ refocus: false }` keeps
+   * the keyboard hidden. Idempotent.
    */
   resume: (reason: string, options?: { refocus?: boolean }) => void;
-  /** Actively request editor focus (debounced + cancelable by a new suspend). */
-  requestFocus: () => void;
+  /**
+   * Actively request editor focus (debounced + cancelable by a new suspend). A null
+   * position keeps the caret, but is a no-op when the DOM already holds focus.
+   */
+  requestFocus: (position?: FocusPosition) => void;
+  /**
+   * IMMEDIATE refocus, for closing an overlay whose own native input holds the
+   * keyboard. Call it BEFORE that overlay unmounts, or RN issues a hideSoftInput.
+   */
+  refocusNow: () => void;
   /**
    * Dismiss the keyboard once, for good. Prefer suspend()/resume() when the
    * keyboard must stay LOCKED down while an overlay is open.
    */
   dismissKeyboard: () => void;
+  /**
+   * Cancel a PENDING refocus without touching the suspend state — needed when a
+   * caption has just taken focus and the refocus would steal it back.
+   */
+  cancelPendingFocus: () => void;
 };
 
 /**
- * The single coordinator for the editor's focus/keyboard state.
- *
- * - Plain toolbar actions (bold, undo, heading, …) do NOT go through it → no
- *   blur → the keyboard stays up.
- * - Overlay actions (table sheet, image menu, system picker, …) suspend(reason)
- *   on open and resume(reason) on finish; success and cancel both resume.
- * - Every refocus goes through ONE place (requestFocus), so back-to-back
- *   overlays cannot race.
- *
- * Uses KeyboardController.dismiss(), not Keyboard.dismiss(): the latter only
- * hides the keyboard of RN TextInputs, the former resigns the native responder
- * on whatever view actually holds it, WKWebView content included.
+ * The single coordinator for focus and keyboard state: overlays suspend/resume,
+ * every refocus goes through requestFocus, so back-to-back overlays cannot race.
  */
 export const useEditorFocusManager = (editor: EditorBridge | null): EditorFocusManager => {
   // Ref: the EditorBridge identity changes every render, which would otherwise
@@ -99,17 +116,12 @@ export const useEditorFocusManager = (editor: EditorBridge | null): EditorFocusM
   const activeReasonsRef = useRef<Set<string>>(new Set());
   const focusTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  /** True between a keyboard will-event and its did-event (the IME is animating). */
   const keyboardAnimatingRef = useRef(false);
-  /** An IME request that arrived mid-animation and must run once it settles. */
   const pendingImeActionRef = useRef<(() => void) | null>(null);
 
   /**
-   * Single entry point for anything that shows or hides the keyboard. Changing
-   * IME visibility WHILE Android's insets animation runs cancels that animation
-   * and then still writes to it — `IllegalStateException: Can't change insets on
-   * an animation that is cancelled`, a hard crash inside
-   * android.view.InsetsController. Queue the request for the did-event instead.
+   * Single entry point for showing or hiding the keyboard: changing IME visibility
+   * mid insets-animation crashes InsetsController (quirk 11).
    */
   const runWhenKeyboardIdle = useCallback((action: () => void) => {
     if (keyboardAnimatingRef.current) {
@@ -128,38 +140,42 @@ export const useEditorFocusManager = (editor: EditorBridge | null): EditorFocusM
   }, []);
 
   /**
-   * Single-shot: one focus command after a short delay, no polling/retry.
-   *
-   * Accepted limitation: a system picker's dismiss callback can fire while the
-   * modal is still closing, and a focus command sent during that UIKit
-   * transition may be swallowed — the keyboard then reappears slightly late.
+   * Single-shot: one focus command after a short delay, no retry. A command sent
+   * during a system modal's closing transition can be swallowed.
    */
-  const focusEditorNow = useCallback(() => {
-    editorRef.current?.focus(null);
+  const focusEditorNow = useCallback((position: FocusPosition = null) => {
+    editorRef.current?.focus(position);
     // Android does not raise the IME from a DOM focus (see setImeOpenerListener).
     if (IS_ANDROID) {
-      const openIme: (() => void) | undefined = imeOpenerListeners[imeOpenerListeners.length - 1];
-      openIme?.();
+      openAndroidIme();
     }
   }, []);
 
-  const requestFocus = useCallback(() => {
+  const refocusNow = useCallback(() => {
     cancelPendingFocus();
-    focusTimerRef.current = setTimeout(() => {
-      focusTimerRef.current = null;
-      if (activeReasonsRef.current.size !== 0) {
-        return;
-      }
-      runWhenKeyboardIdle(() => {
-        // Re-check: a suspend may have landed while the keyboard was settling.
-        if (activeReasonsRef.current.size === 0) {
-          focusEditorNow();
-        }
-      });
-    }, REFOCUS_DELAY_MS);
-  }, [cancelPendingFocus, focusEditorNow, runWhenKeyboardIdle]);
+    if (activeReasonsRef.current.size !== 0) return;
+    focusEditorNow();
+  }, [cancelPendingFocus, focusEditorNow]);
 
-  // See dismissKeyboardReliably.
+  const requestFocus = useCallback(
+    (position: FocusPosition = null) => {
+      cancelPendingFocus();
+      focusTimerRef.current = setTimeout(() => {
+        focusTimerRef.current = null;
+        if (activeReasonsRef.current.size !== 0) {
+          return;
+        }
+        runWhenKeyboardIdle(() => {
+          // Re-check: a suspend may have landed while the keyboard was settling.
+          if (activeReasonsRef.current.size === 0) {
+            focusEditorNow(position);
+          }
+        });
+      }, REFOCUS_DELAY_MS);
+    },
+    [cancelPendingFocus, focusEditorNow, runWhenKeyboardIdle],
+  );
+
   const blurAckPendingRef = useRef(false);
   const blurAckTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -173,33 +189,28 @@ export const useEditorFocusManager = (editor: EditorBridge | null): EditorFocusM
       clearTimeout(blurAckTimerRef.current);
       blurAckTimerRef.current = null;
     }
+    if (IS_ANDROID) {
+      // Only for a keyboard held by a HOST input; the document blur covers the rest.
+      // keepFocus, because a cleared focus makes Android search for a new one.
+      runWhenKeyboardIdle(() => KeyboardController.dismiss({ keepFocus: true }));
+      return;
+    }
     KeyboardController.dismiss();
-  }, []);
+  }, [runWhenKeyboardIdle]);
 
   /**
-   * Dismiss the keyboard for good, in EXACTLY ONE animation beat. Order matters:
-   * blur the WebView (async postMessage), WAIT for its "DOM has lost focus" ack,
-   * THEN resign native. A bare `editor.blur()`, or resigning while the DOM still
-   * holds focus, lets WKWebView (keyboardDisplayRequiresUserAction=false
-   * swizzled) reclaim the first responder mid-animation — the keyboard slides
-   * down ~20%, pops back up, then closes: two visible steps instead of one.
+   * Dismiss in EXACTLY ONE animation beat: blur the WebView, WAIT for its ack, THEN
+   * resign native. Two hide paths in flight make the keyboard bounce (quirk 11).
    */
   const dismissKeyboardReliably = useCallback(() => {
     editorRef.current?.blur();
     editorRef.current?.forceBlurWebView?.();
-    if (IS_ANDROID) {
-      // No ack dance needed, but do NOT stop at the document blur: the keyboard
-      // may belong to a host input (title field, search box), not the WebView.
-      // Resign natively, through the idle gate (see runWhenKeyboardIdle).
-      runWhenKeyboardIdle(() => KeyboardController.dismiss());
-      return;
-    }
     blurAckPendingRef.current = true;
     if (blurAckTimerRef.current) {
       clearTimeout(blurAckTimerRef.current);
     }
     blurAckTimerRef.current = setTimeout(finishNativeDismiss, BLUR_ACK_TIMEOUT_MS);
-  }, [finishNativeDismiss, runWhenKeyboardIdle]);
+  }, [finishNativeDismiss]);
 
   // Receive the ack from the WebView (routed via TableBridge.onEditorMessage).
   useEffect(() => {
@@ -232,13 +243,8 @@ export const useEditorFocusManager = (editor: EditorBridge | null): EditorFocusM
     [requestFocus],
   );
 
-  // Tracks the IME animation window (feeds runWhenKeyboardIdle) and, on iOS
-  // only, locks the keyboard down while suspended: WKWebView can restore the
-  // first responder by itself around presenting/dismissing a system modal, so
-  // any keyboardWillShow while a reason is active is illegal → dismiss at once.
-  // Android is deliberately NOT locked: no such swizzle, a DOM blur already
-  // closes the IME, and dismissing from inside willShow is the InsetsController
-  // crash (see runWhenKeyboardIdle).
+  // Tracks the IME animation window, and on iOS locks the keyboard down while
+  // suspended: WKWebView can restore the first responder around a system modal.
   useEffect(() => {
     const settle = () => {
       keyboardAnimatingRef.current = false;
@@ -273,7 +279,14 @@ export const useEditorFocusManager = (editor: EditorBridge | null): EditorFocusM
   );
 
   return useMemo(
-    () => ({ suspend, resume, requestFocus, dismissKeyboard: dismissKeyboardReliably }),
-    [suspend, resume, requestFocus, dismissKeyboardReliably],
+    () => ({
+      suspend,
+      resume,
+      requestFocus,
+      refocusNow,
+      dismissKeyboard: dismissKeyboardReliably,
+      cancelPendingFocus,
+    }),
+    [suspend, resume, requestFocus, refocusNow, dismissKeyboardReliably, cancelPendingFocus],
   );
 };

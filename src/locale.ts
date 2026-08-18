@@ -4,12 +4,10 @@ import { DEFAULT_EDITOR_LABELS } from './protocol';
 import { DEFAULT_LABELS, DEFAULT_HEADING_OPTIONS } from './theme/defaults';
 
 /**
- * Every user-facing string for one language. Use a built-in bundle
- * (BUILTIN_LOCALES) or supply your own; individual fields stay overridable
- * per-editor via `placeholder` / `labels` / `editorLabels` / `headingOptions`.
+ * Every user-facing string for one language. Use a built-in bundle or supply your
+ * own; individual fields stay overridable per editor.
  */
 export interface RichEditorLocale {
-  /** Empty-document placeholder. */
   placeholder: string;
   /** React Native toolbar strings. */
   labels: RichEditorLabels;
@@ -19,7 +17,6 @@ export interface RichEditorLocale {
   headingOptions: HeadingOption[];
 }
 
-/** English (the default). */
 export const enLocale: RichEditorLocale = {
   placeholder: 'Start writing…',
   labels: DEFAULT_LABELS,
@@ -27,7 +24,6 @@ export const enLocale: RichEditorLocale = {
   headingOptions: DEFAULT_HEADING_OPTIONS,
 };
 
-/** Vietnamese. */
 export const viLocale: RichEditorLocale = {
   placeholder: 'Bắt đầu soạn thảo nội dung...',
   labels: {
@@ -60,7 +56,9 @@ export const viLocale: RichEditorLocale = {
     alignJustify: 'Căn đều hai bên',
     linkTitle: 'Liên kết',
     linkPlaceholder: 'https://...',
+    linkTextPlaceholder: 'Tiêu đề hiển thị (tuỳ chọn)',
     linkApply: 'Gắn liên kết',
+    linkUpdate: 'Cập nhật',
     linkRemove: 'Xóa liên kết',
     tableTitle: 'Thuộc tính bảng',
     tableRows: 'Hàng',
@@ -102,7 +100,6 @@ export const BUILTIN_LOCALES = {
   vi: viLocale,
 } as const satisfies Record<string, RichEditorLocale>;
 
-/** Code of a built-in bundle. */
 export type BuiltinLocaleCode = keyof typeof BUILTIN_LOCALES;
 
 /**
@@ -111,9 +108,8 @@ export type BuiltinLocaleCode = keyof typeof BUILTIN_LOCALES;
  */
 export type LocaleOption = BuiltinLocaleCode | (string & {}) | RichEditorLocale;
 
-// hasOwnProperty.call, not `in` (walks the prototype chain) and not
-// `Object.hasOwn` (ES2022, unpolyfilled on the Hermes of the react-native peer
-// floor, and tsconfig targets ESNext so the compiler would not flag it).
+// hasOwnProperty.call, not `in` (walks the prototype chain) nor `Object.hasOwn`
+// (unpolyfilled on the Hermes of the react-native peer floor).
 const isBuiltinLocaleCode = (code: string): code is BuiltinLocaleCode =>
   Object.prototype.hasOwnProperty.call(BUILTIN_LOCALES, code);
 

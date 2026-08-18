@@ -2,16 +2,11 @@ import { Extension, Editor } from '@tiptap/core';
 import { Plugin, PluginKey } from '@tiptap/pm/state';
 import type { EditorState } from '@tiptap/pm/state';
 import { getScrollContainer } from '../domUtils';
+import { SCROLL_BEHAVIOR } from '../scrollCoordinator';
 
 /**
- * IN-NOTE SEARCH — holds state only (query/matches/index; plain JS, so
- * dual-instance safe). SearchOverlay.tsx draws the highlights as overlay boxes
- * portalled into the scroll container, in content coordinates.
- *
- * Do NOT use Decoration: a DecorationSet built from our own prosemirror-view
- * crashes (`localsInner`) against the EditorView inlined in the tentap bundle.
- * Do NOT use the CSS Custom Highlight API: CSS.highlights is undefined in
- * WKWebView (iOS 18) even though Safari has it.
+ * IN-NOTE SEARCH — state only, so it is dual-instance safe; SearchOverlay draws the
+ * boxes, because a match must be positioned and `CSS.highlights` is absent in WKWebView.
  */
 
 type SearchMatch = { from: number; to: number };
@@ -24,15 +19,39 @@ const searchKey = new PluginKey<SearchPluginState>('searchHighlightState');
 
 const EMPTY_STATE: SearchPluginState = { query: '', matches: [], activeIndex: 0 };
 
-/** Scan the whole doc for matches (case-insensitive, within each text node). */
+/**
+ * Fold to a diacritic-free lowercase form, PRESERVING LENGTH so match offsets stay
+ * valid. A character whose fold would change its length keeps its original form.
+ */
+const foldForSearch = (text: string): string => {
+  let out = '';
+  for (const ch of text) {
+    // Escapes keep this file inside the English-only guard; the characters are
+    // the d-with-stroke pair.
+    if (ch === '\u0111') {
+      out += 'd';
+      continue;
+    }
+    if (ch === '\u0110') {
+      out += 'D';
+      continue;
+    }
+    const base = ch.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+    out += base.length === ch.length ? base : ch;
+  }
+  return out.toLowerCase();
+};
+
+/** Scan the whole doc for matches (case- and diacritic-insensitive, within each
+ * text node — a query typed without accents finds its accented form). */
 const computeMatches = (doc: EditorState['doc'], query: string): SearchMatch[] => {
   const matches: SearchMatch[] = [];
-  const needle = query.toLowerCase();
+  const needle = foldForSearch(query);
   if (!needle) return matches;
 
   doc.descendants((node, pos) => {
     if (!node.isText || !node.text) return true;
-    const haystack = node.text.toLowerCase();
+    const haystack = foldForSearch(node.text);
     let index = haystack.indexOf(needle);
     while (index !== -1) {
       matches.push({ from: pos + index, to: pos + index + needle.length });
@@ -104,7 +123,7 @@ const scrollToActiveMatch = (editor: Editor) => {
     const coords = editor.view.coordsAtPos(match.from);
     const containerTop = container.getBoundingClientRect().top;
     const targetTop = container.scrollTop + (coords.top - containerTop) - 120;
-    container.scrollTo({ top: Math.max(0, targetTop), behavior: 'smooth' });
+    container.scrollTo({ top: Math.max(0, targetTop), behavior: SCROLL_BEHAVIOR });
   } catch {
     // position could not be resolved (doc just changed) — skip
   }

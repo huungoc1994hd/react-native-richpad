@@ -175,10 +175,8 @@ export const ColorPickerModal = ({
     const maxBrightnessRgb = hsvToRgb(hsv.h, hsv.s, 1);
     const maxBrightnessHex = rgbToHex(maxBrightnessRgb.r, maxBrightnessRgb.g, maxBrightnessRgb.b);
 
-    // One Pan per surface also covers taps: onBegin fires on touch-down with
-    // view-local x/y before the pan activates, so no separate Tap gesture is
-    // needed. runOnJS(true) is mandatory — these callbacks set React state and
-    // would otherwise run as UI-thread worklets.
+    // One Pan per surface also covers taps: onBegin fires on touch-down with local
+    // coordinates. runOnJS(true) is mandatory — these callbacks set React state.
     const spectrumPan = Gesture.Pan()
       .runOnJS(true)
       .onBegin(e => onSpectrumGesture(e))
@@ -449,10 +447,8 @@ const styles = StyleSheet.create({
     width: `${100 / SWATCH_COLUMNS}%`,
     height: SWATCH_CELL_HEIGHT,
   },
-  // `Paints the cell color 1 physical pixel past its bounds so neighbors overlap.
-  // Without it a 1px white hairline of modal background shows between swatches:
-  // cell edges land on fractional device pixels (25dp rows at 2.75x = 68.75px) and
-  // Android's pixel-grid rounding can round adjacent cells apart. iOS unaffected.`
+  // Paints each cell 1 physical pixel past its bounds so neighbours overlap: cell
+  // edges land on fractional device pixels and Android can round them apart.
   swatchBleed: {
     position: 'absolute',
     top: -StyleSheet.hairlineWidth,
@@ -466,9 +462,8 @@ const styles = StyleSheet.create({
     zIndex: 10,
     boxShadow: '0px 2px 6px rgba(0, 0, 0, 0.3)',
   },
-  // White selection ring as an overlay child, not a border on the cell: a parent
-  // border is painted over by the neighbors' bleed. swatchSelected's zIndex keeps
-  // this above them.
+  // Selection ring as an overlay child, not a border: a parent border is painted over
+  // by the neighbours' bleed.
   swatchRing: {
     ...StyleSheet.absoluteFill,
     borderWidth: 1.5,
@@ -502,9 +497,6 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: '#FFFFFF',
     backgroundColor: 'transparent',
-    // Per CSS an outer shadow is clipped OUTSIDE the border box, so the ring's
-    // transparent center stays clean. Two layers: a soft drop plus a 1px halo so
-    // the ring reads on pale gradients.
     boxShadow: '0px 1px 4px rgba(0, 0, 0, 0.28), 0px 0px 1px rgba(0, 0, 0, 0.20)',
   },
   sliderContainer: {
@@ -514,7 +506,6 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   sliderWrapper: {
-    // Flex to the fixed label gap; width is measured via onLayout for thumb math.
     flex: 1,
     paddingHorizontal: SLIDER_TOUCH_PAD,
     paddingVertical: SLIDER_TOUCH_PAD,

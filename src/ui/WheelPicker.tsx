@@ -19,15 +19,12 @@ const DEFAULT_VISIBLE_COUNT = 5;
 
 /**
  * Momentum projection at release, in seconds: landing = offset + velocity * k.
- * 0.1s is the projection equivalent of UIScrollViewDecelerationRateFast (0.99/ms),
- * so a flick travels the native iOS distance.
+ * 0.1s matches UIScrollViewDecelerationRateFast, so a flick travels the iOS distance.
  */
 const PROJECTION_S = 0.1;
 /**
- * Slightly overdamped: carries the release velocity into ONE continuous curve
- * from finger-up to detent, no oscillation. Why the wheel is gesture-driven and
- * not a ScrollView: Android's snapToInterval boosts velocity and truncates the
- * fling at the target (ReactScrollView.flingAndSnap) — a robotic two-phase stop.
+ * Slightly overdamped: one continuous curve from finger-up to detent. Why not a
+ * ScrollView — Android's snapToInterval truncates the fling into a two-phase stop.
  */
 const SNAP_SPRING = { mass: 1, stiffness: 220, damping: 34 } as const;
 /** Drag resistance divisor past the first/last item (iOS rubber-band feel). */
@@ -95,10 +92,8 @@ const WheelItem = ({ label, index, itemHeight, offset, color }: WheelItemProps) 
 };
 
 /**
- * iOS-style wheel picker with self-owned physics so it feels identical on both
- * platforms: a Pan gesture drives a Reanimated shared value on the UI thread, and
- * release projects the momentum onto the nearest detent. `lastReported` makes
- * duplicate settles and controlled-value echoes no-ops.
+ * iOS-style wheel with self-owned physics, identical on both platforms: a Pan gesture
+ * drives a shared value and release projects the momentum onto the nearest detent.
  */
 export const WheelPicker = ({
   items,
@@ -199,9 +194,8 @@ export const WheelPicker = ({
   }));
 
   return (
-    // Gestures inside a plain RN Modal need their own GestureHandlerRootView on
-    // Android. SURVIVAL RULE: the height style is mandatory — the root defaults to
-    // `flex: 1`, and flexBasis 0 in this auto-height parent collapses the wheel.
+    // Gestures inside a plain RN Modal need their own root on Android. The height
+    // style is mandatory: the root defaults to flex:1 and would collapse the wheel.
     <GestureHandlerRootView style={{ height: wheelHeight }}>
       <GestureDetector gesture={pan}>
         <View

@@ -7,7 +7,8 @@
     "dev": "vite",
     "type-check": "tsc --noEmit",
     "build": "tsc --noEmit && vite build && node build.js",
-    "smoke-test": "node smoke-test.mjs"
+    "smoke-test": "node smoke-test.mjs",
+    "postinstall": "patch-package"
   },
   "dependencies": {
     "@10play/tentap-editor": "^1.0.1",
@@ -26,6 +27,7 @@
     "@types/react-dom": "^18.3.7",
     "@vitejs/plugin-react": "^4.3.4",
     "jsdom": "^29.1.1",
+    "patch-package": "^8.0.1",
     "vite": "^5.4.14"
   }
 }
