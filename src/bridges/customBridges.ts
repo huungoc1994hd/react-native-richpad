@@ -9,6 +9,7 @@ import {
   FontSizeBridgeMessage,
   TableBridgeMessage,
   ConfigBridgeMessage,
+  EditorMountedMessage,
   MediaBridgeMessage,
   ImageToolkitActiveMessage,
   SearchBridgeMessage,
@@ -22,11 +23,8 @@ import {
 } from '../protocol';
 
 /**
- * ARCHITECTURE: the editor uses `customSource` (pre-built HTML from `webview/`),
- * so all `onBridgeMessage` handling and every `tiptapExtension` run INSIDE the
- * WebView (webview/main.tsx). The RN side supplies `extendEditorInstance`
- * (methods that post messages), `onEditorMessage` (webview→RN messages, routed to
- * every bridge), and the `declare module` types.
+ * The editor uses `customSource`, so every onBridgeMessage and tiptapExtension runs
+ * INSIDE the WebView. This side supplies the methods, listeners and module types.
  */
 declare module '@10play/tentap-editor' {
   interface EditorBridge {
@@ -44,32 +42,38 @@ declare module '@10play/tentap-editor' {
     mergeCells: () => void;
     splitCell: () => void;
     forceBlurWebView: () => void;
+    /** Android IME dance: return DOM focus to the host owning the input session. */
+    restoreInputFocus: () => void;
     /**
      * Insert at the cursor position saved when the overlay opened, not the
      * current selection (unlike tentap's setImage) — see MediaBridgeMessage.
      */
     insertImage: (src: string) => void;
+    /**
+     * End the whole image session without focusing the editor. Call it through
+     * RichEditorInstance.leaveImageSession, which also transfers ownership.
+     */
+    leaveImageSession: () => void;
     /** Push labels + theme to the WebView (call once the editor is alive). */
     setEditorConfig: (config: EditorConfig) => void;
     /**
-     * Tell the WebView how much of its viewport the keyboard covers, so it keeps
-     * the cursor above it. Driven by react-native-keyboard-controller (RN's own
-     * will-events are iOS-only); the height differs per platform because Android
-     * already resizes the window.
+     * Tell the WebView how much of its bottom the host's toolbar covers, which changes
+     * as the keyboard moves that toolbar.
      */
     notifyKeyboardWillShow: (payload: KeyboardWillShowPayload) => void;
-    /** In-document find (highlight + navigate between matches). */
     setSearchQuery: (query: string) => void;
     searchNext: () => void;
     searchPrev: () => void;
     clearSearch: () => void;
-    /** Clear formatting on the selection (back to plain text). */
     clearFormatting: () => void;
     /** Link the selection (or insert the URL as text when nothing is selected). */
-    setLink: (href: string) => void;
-    /** Remove the link at the cursor/selection. */
+    setLink: (href: string, text?: string) => void;
+    saveSelection: () => void;
     unlink: () => void;
-    /** Select the entire document. */
+    /**
+     * Select the entire document — document-scoped even during a caption session;
+     * in-field select-all belongs to the OS text menu.
+     */
     selectAll: () => void;
   }
   interface BridgeState
@@ -100,10 +104,8 @@ export const FontSizeBridge = new BridgeExtension<
   { setFontSize: (size: string) => void; unsetFontSize: () => void },
   FontSizeBridgeMessage
 >({
-  // MUST be 'textStyle': tentap IGNORES forceName when a bridge has a
-  // tiptapExtension — the extension's name wins, and the WebView bridge carries
-  // TextStyle. The WebView registers an extension only if it can look its config
-  // up by that name in the map RN injects; a mismatch drops setFontSize entirely.
+  // MUST be 'textStyle': tentap IGNORES forceName when a bridge has a tiptapExtension,
+  // and a name the WebView cannot look up drops the bridge silently (quirk 19).
   forceName: 'textStyle',
   extendEditorInstance: sendBridgeMessage => {
     return {
@@ -119,9 +121,8 @@ type BlurAckListener = () => void;
 const blurAckListeners: BlurAckListener[] = [];
 
 /**
- * "DOM blur finished" ack from the WebView (after a ForceBlur); the focus manager
- * uses it to defer KeyboardController.dismiss() until the DOM really lost focus.
- * Same LIFO registry rules as setImageToolkitActiveListener.
+ * "DOM blur finished" ack from the WebView, which the focus manager waits for before
+ * resigning native. Same LIFO registry rules as setImageToolkitActiveListener.
  */
 export const setBlurAckListener = (listener: BlurAckListener) => {
   blurAckListeners.push(listener);
@@ -148,6 +149,7 @@ export const TableBridge = new BridgeExtension<
     mergeCells: () => void;
     splitCell: () => void;
     forceBlurWebView: () => void;
+    restoreInputFocus: () => void;
   },
   TableBridgeMessage | BlurAckMessage
 >({
@@ -182,18 +184,22 @@ export const TableBridge = new BridgeExtension<
       splitCell: () => sendBridgeMessage({ type: BridgeMessageType.SplitCell, payload: undefined }),
       forceBlurWebView: () =>
         sendBridgeMessage({ type: BridgeMessageType.ForceBlur, payload: undefined }),
+      restoreInputFocus: () =>
+        sendBridgeMessage({ type: BridgeMessageType.RestoreInputFocus, payload: undefined }),
     };
   },
 });
 
-type ImageToolkitActiveListener = (active: boolean, inCell: boolean) => void;
+type ImageToolkitActiveListener = (
+  active: boolean,
+  inCell: boolean,
+  captionFocused: boolean,
+) => void;
 const imageToolkitActiveListeners: ImageToolkitActiveListener[] = [];
 
 /**
  * Image-toolkit selection state from the WebView. BridgeExtension instances are
- * module-level, so per-editor dispatch needs this registry. LIFO: the newest
- * registration receives the messages and clearing hands ownership back, so an
- * editor outliving another keeps it.
+ * module-level, so per-editor dispatch needs this LIFO registry.
  */
 export const setImageToolkitActiveListener = (listener: ImageToolkitActiveListener) => {
   imageToolkitActiveListeners.push(listener);
@@ -208,7 +214,7 @@ export const clearImageToolkitActiveListener = (listener: ImageToolkitActiveList
 
 export const MediaBridge = new BridgeExtension<
   Record<string, never>,
-  { insertImage: (src: string) => void },
+  { insertImage: (src: string) => void; leaveImageSession: () => void },
   MediaBridgeMessage | ImageToolkitActiveMessage
 >({
   forceName: 'media',
@@ -216,6 +222,8 @@ export const MediaBridge = new BridgeExtension<
     return {
       insertImage: src =>
         sendBridgeMessage({ type: BridgeMessageType.InsertImage, payload: { src } }),
+      leaveImageSession: () =>
+        sendBridgeMessage({ type: BridgeMessageType.LeaveImageSession, payload: undefined }),
     };
   },
   // WebView → RN messages (RichText routes them to every bridge).
@@ -223,7 +231,11 @@ export const MediaBridge = new BridgeExtension<
     if (message.type === BridgeMessageType.ImageToolkitActive) {
       const listener: ImageToolkitActiveListener | undefined =
         imageToolkitActiveListeners[imageToolkitActiveListeners.length - 1];
-      listener?.(message.payload.active, message.payload.inCell);
+      listener?.(
+        message.payload.active,
+        message.payload.inCell,
+        message.payload.captionFocused ?? false,
+      );
       return true;
     }
     return false;
@@ -261,7 +273,8 @@ export const FormatBridge = new BridgeExtension<
   FormatBridgeState,
   {
     clearFormatting: () => void;
-    setLink: (href: string) => void;
+    setLink: (href: string, text?: string) => void;
+    saveSelection: () => void;
     unlink: () => void;
     selectAll: () => void;
   },
@@ -272,12 +285,27 @@ export const FormatBridge = new BridgeExtension<
     return {
       clearFormatting: () =>
         sendBridgeMessage({ type: BridgeMessageType.ClearFormatting, payload: undefined }),
-      setLink: href => sendBridgeMessage({ type: BridgeMessageType.SetLink, payload: { href } }),
+      setLink: (href, text) =>
+        sendBridgeMessage({ type: BridgeMessageType.SetLink, payload: { href, text } }),
+      saveSelection: () =>
+        sendBridgeMessage({ type: BridgeMessageType.SaveSelection, payload: undefined }),
       unlink: () => sendBridgeMessage({ type: BridgeMessageType.Unlink, payload: undefined }),
       selectAll: () => sendBridgeMessage({ type: BridgeMessageType.SelectAll, payload: undefined }),
     };
   },
 });
+
+type EditorMountedListener = () => void;
+let editorMountedListener: EditorMountedListener | null = null;
+
+/** Called on every page load, including the remount after a renderer crash. */
+export const setEditorMountedListener = (listener: EditorMountedListener) => {
+  editorMountedListener = listener;
+};
+
+export const clearEditorMountedListener = (listener: EditorMountedListener) => {
+  if (editorMountedListener === listener) editorMountedListener = null;
+};
 
 export const ConfigBridge = new BridgeExtension<
   Record<string, never>,
@@ -285,9 +313,16 @@ export const ConfigBridge = new BridgeExtension<
     setEditorConfig: (config: EditorConfig) => void;
     notifyKeyboardWillShow: (payload: KeyboardWillShowPayload) => void;
   },
-  ConfigBridgeMessage
+  ConfigBridgeMessage | EditorMountedMessage
 >({
   forceName: 'editorConfig',
+  onEditorMessage: message => {
+    if (message.type === BridgeMessageType.EditorMounted) {
+      editorMountedListener?.();
+      return true;
+    }
+    return false;
+  },
   extendEditorInstance: sendBridgeMessage => {
     return {
       setEditorConfig: config =>

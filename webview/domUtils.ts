@@ -1,17 +1,25 @@
-/** DOM contracts for the WebView overlays, plus the shared exhaustiveness assertion. */
-
 /**
- * Compile-time proof that a switch covered its union: the argument only type-checks
- * while every member is handled, so a new one is an error at the call site.
- *
- * Pass `message` for a union; pass `message.type` where the bridge carries a single
- * object type, which never narrows to `never` on its own.
+ * Compile-time proof that a switch covered its union. Pass `message` for a union, or
+ * `message.type` where the bridge carries a single object type.
  */
 export const assertUnhandled = (unhandled: never): void => {
   void unhandled;
 };
 
 /** tentap's scroll wrapper inside #root. The only place this DOM contract is encoded. */
+/**
+ * Whether an INPUT SESSION is live: the focused element is an editing host or form
+ * control. Answers "in-page handoff or a new session?", which viewport height cannot.
+ */
+export const isInputSessionLive = (): boolean => {
+  const el = document.activeElement;
+  if (!(el instanceof HTMLElement)) return false;
+  return el.isContentEditable || el.tagName === 'INPUT' || el.tagName === 'TEXTAREA';
+};
+
+/** Android WebView (Chromium) vs iOS (WebKit) — several quirks split on it. */
+export const IS_ANDROID = /android/i.test(navigator.userAgent);
+
 export const getScrollContainer = (): HTMLElement | null =>
   document.querySelector('#root > div:nth-of-type(1)');
 

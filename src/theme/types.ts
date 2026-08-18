@@ -8,27 +8,17 @@ export type DeepPartial<T> = {
 export interface RichToolbarTheme {
   /** Background of the top/bottom toolbar bars. */
   background: string;
-  /** Background of popover/menu cards. */
   surface: string;
-  /** Background of an active (toggled-on) toolbar button. */
   surfaceActive: string;
-  /** Background of the highlighted menu item. */
   itemActiveBackground: string;
-  /** Dividers between toolbar groups. */
   divider: string;
-  /** Borders (bar edges, inputs). */
   border: string;
-  /** Default icon/label color. */
   icon: string;
-  /** Icon/label color when the button is active. */
   iconActive: string;
-  /** Primary text color. */
   text: string;
-  /** Secondary/muted text color. */
   textMuted: string;
   /** Destructive actions (e.g. the link popover's Remove). */
   danger: string;
-  /** Accent color for selected menu items and check marks. */
   accent: string;
   /**
    * Android press ripple. Must be TRANSLUCENT: it paints over whatever is
@@ -36,17 +26,15 @@ export interface RichToolbarTheme {
    */
   ripple: string;
   /**
-   * Drop-shadow color for floating cards (popovers, the color picker). It is the color
-   * of a `boxShadow` and is taken as-is, so include the alpha you want —
-   * `'transparent'` removes the shadow.
+   * Drop-shadow colour for floating cards, taken as-is — include the alpha you want;
+   * 'transparent' removes the shadow.
    */
   shadowColor: string;
 }
 
 /**
- * `EditorTheme` after `resolveTheme`: every color is filled from the base theme,
- * so consumers of a resolved theme never need a fallback. `fontFamily` stays
- * optional — leaving it unset means "use the WebView default".
+ * `EditorTheme` after resolveTheme: every colour filled in, so consumers need no
+ * fallback. `fontFamily` stays optional — unset means the WebView default.
  */
 export type ResolvedEditorTheme = Required<Omit<EditorTheme, 'fontFamily'>> &
   Pick<EditorTheme, 'fontFamily'>;
@@ -54,13 +42,9 @@ export type ResolvedEditorTheme = Required<Omit<EditorTheme, 'fontFamily'>> &
 /** The full theme for a RichEditor tree. */
 export interface RichTheme {
   mode: 'light' | 'dark';
-  /** React Native toolbar/menu colors. */
   toolbar: RichToolbarTheme;
-  /** WebView editor theme, mapped onto CSS variables inside the document. */
   editor: ResolvedEditorTheme;
-  /** Swatches offered in the text-color menu. */
   fontColors: string[];
-  /** Swatches offered in the highlight-color menu. */
   highlightColors: string[];
 }
 
@@ -111,7 +95,10 @@ export interface RichEditorLabels {
   // Bottom-bar link menu.
   linkTitle: string;
   linkPlaceholder: string;
+  linkTextPlaceholder: string;
   linkApply: string;
+  /** Submit label when the popover edits an existing link instead of creating one. */
+  linkUpdate: string;
   linkRemove: string;
   // Table size picker.
   tableTitle: string;

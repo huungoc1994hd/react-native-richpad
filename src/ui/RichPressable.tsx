@@ -14,10 +14,8 @@ const PRESSED_OPACITY = 0.6;
 const DISABLED_OPACITY = 0.5;
 
 /**
- * Style keys that describe the BOX — where it sits and what shape it is. These go
- * on the clipping wrapper so it occupies exactly the space the caller asked for.
- * Everything else (padding, content alignment) stays on the Pressable, which then
- * fills the wrapper edge to edge so the ripple covers the whole button.
+ * Style keys describing the BOX. They go on the clipping wrapper; everything else
+ * stays on the Pressable, which fills it so the ripple covers the whole button.
  */
 const BOX_KEYS = [
   'borderRadius',
@@ -88,36 +86,17 @@ export interface RichPressableProps extends Omit<
 > {
   children?: ReactNode;
   style?: StyleProp<ViewStyle>;
-  /** Override the themed ripple color. */
   rippleColor?: string;
   /**
-   * Suppress ripple AND dim. For a surface whose own appearance is the payload —
-   * a color chip, where a ripple reads as a stain and a dim shows a color the user
-   * did not pick. Such surfaces answer the tap by other means.
+   * Suppress ripple AND dim, for a surface whose own appearance is the payload — a
+   * colour chip, where either would misrepresent the colour.
    */
   noFeedback?: boolean;
 }
 
 /**
- * The press primitive every tappable surface INSIDE this library goes through, so
- * feedback is uniform and themed without each call site restating it. Internal:
- * consumers compose their own with `ToolbarItem.render`.
- *
- * Android gets the platform ripple; every other platform dims. Never both — a
- * ripple under a dim reads as a double tap.
- *
- * WHY THE ANDROID BRANCH ADDS A WRAPPER VIEW. RN's ripple never follows
- * borderRadius on its own: ReactDrawableHelper builds a bounded ripple's mask as a
- * plain rectangle, and a target's own `overflow: 'hidden'` cannot fix it because
- * ReactViewGroup clips in `dispatchDraw`, which runs BEFORE the view paints its own
- * foreground. A PARENT's clip does work — `clipToPaddingBox` uses `clipPath` with
- * the rounded padding-box path, and children (including their foreground) draw
- * inside it. So the rounded shape has to come from one level up.
- *
- * The ripple must also be a FOREGROUND drawable: the background path
- * (`BackgroundStyleApplicator.setFeedbackUnderlay`) discards its own result when
- * `enableNewBackgroundAndBorderDrawables` is on — the default with Fabric — so the
- * ripple is never installed at all.
+ * The press primitive every tappable surface goes through: Android gets the platform
+ * ripple, everything else dims. The wrapper View is what rounds a bounded ripple.
  */
 export const RichPressable = ({
   children,

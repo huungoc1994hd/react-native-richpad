@@ -2,7 +2,8 @@ import { DEFAULT_EDITOR_LABELS, EditorConfig, EditorLabels, EditorMetrics } from
 
 let labels: EditorLabels = { ...DEFAULT_EDITOR_LABELS };
 
-const DEFAULT_METRICS: Required<EditorMetrics> = {
+/** Exported for the places that need a metric before InitConfig can arrive. */
+export const DEFAULT_METRICS: Required<EditorMetrics> = {
   imageMinWidthPct: 15,
   imageMinWidthPx: 48,
   tableMinCellWidth: 70,
@@ -17,7 +18,7 @@ const setVar = (name: string, value: string | undefined) => {
   }
 };
 
-/** Apply config received from RN (InitConfig): merge labels, set CSS variables, store metrics. */
+/** Apply an InitConfig payload from RN. */
 export const applyEditorConfig = (config: EditorConfig) => {
   if (config.labels) {
     labels = { ...labels, ...config.labels };
@@ -58,9 +59,8 @@ export const applyEditorConfig = (config: EditorConfig) => {
   }
 
   if (config.metrics) {
-    // Keyed copy, not a spread: every EditorMetrics field is optional, so a
-    // spread would write a present-but-undefined key over a resolved one — and a
-    // computed string key would switch off checking on both key and value.
+    // Keyed copy, not a spread: every field is optional, so a spread would write a
+    // present-but-undefined key over a resolved one.
     const next = { ...metrics };
     const take = <K extends keyof Required<EditorMetrics>>(key: K) => {
       const value = config.metrics?.[key];
@@ -93,8 +93,9 @@ export const subscribeEditorConfig = (listener: () => void): (() => void) => {
 };
 
 /**
- * Keyboard state pushed from RN. active: an auto-scroll is following the keyboard,
- * so autoScrollToCursor must yield. obscuredHeight: bottom area hidden by the
- * keyboard + RN bottom bar, used to keep popovers above it; 0 = closed.
+ * The one geometry fact the page cannot measure: a native host view over the
+ * WebView. See KeyboardWillShowPayload.hostChromeOverlap.
  */
-export const keyboardScrollState = { active: false, obscuredHeight: 0 };
+export const hostChromeState = {
+  overlap: 0,
+};

@@ -1,23 +1,18 @@
 import { useEffect, useRef, useState } from 'react';
-import {
-  Animated,
-  Modal,
-  Pressable,
-  StyleSheet,
-  Text,
-  View,
-  type LayoutChangeEvent,
-} from 'react-native';
+import { Animated, BackHandler, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Portal } from '@gorhom/portal';
 import { WheelPicker } from './WheelPicker';
 import { RichPressable } from './RichPressable';
 import { useRichTheme } from '../context/ThemeContext';
 import { useLabels } from '../context/LabelsContext';
+import { DEFAULT_PORTAL_HOST } from './popover/PopoverMenu';
 
 const SIZE_ITEMS = Array.from({ length: 10 }, (_, i) => i + 1);
 /** Distance (px) the sheet travels up from below the screen. */
 const SHEET_TRAVEL = 480;
-const OPEN_MS = 240;
-const CLOSE_MS = 200;
+/** Paced to sit close to a typical keyboard hide, without tracking it. */
+const OPEN_MS = 320;
+const CLOSE_MS = 250;
 
 export interface TableSizePickerProps {
   visible: boolean;
@@ -25,18 +20,15 @@ export interface TableSizePickerProps {
   /** Called with the chosen dimensions when the user confirms. */
   onInsert: (rows: number, cols: number) => void;
   /**
-   * Fired after the close animation finished AND the Modal unmounted. Restore
-   * editor focus here, not in onClose: while the Modal's Android window lives it
-   * is the one the input method serves, so a keyboard request from the main
-   * window is rejected (ImeTracker `onFailed at PHASE_CLIENT_VIEW_SERVED`).
+   * Fired after the close animation AND the unmount. Restore focus here, not in
+   * onClose: a refocus during teardown races it.
    */
   onClosed?: () => void;
 }
 
 /**
- * Bottom-anchored modal for choosing table dimensions; no @gorhom/bottom-sheet
- * dependency. The Modal's own `animationType` is off so the backdrop can fade
- * while the sheet slides.
+ * Bottom sheet for table dimensions, rendered through the SAME-WINDOW portal the
+ * popovers use — never an RN Modal, which would fight the closing IME (quirk 11).
  */
 export const TableSizePicker = ({ visible, onClose, onInsert, onClosed }: TableSizePickerProps) => {
   const theme = useRichTheme();
@@ -54,61 +46,21 @@ export const TableSizePicker = ({ visible, onClose, onInsert, onClosed }: TableS
   const onClosedRef = useRef(onClosed);
   onClosedRef.current = onClosed;
 
-  /** Tallest container height seen during this open — the window grows as the IME leaves. */
-  const tallestHeightRef = useRef(0);
-  const settleFrameRef = useRef<number | null>(null);
-  const openStartedRef = useRef(false);
-
-  const cancelSettleFrame = () => {
-    if (settleFrameRef.current !== null) {
-      cancelAnimationFrame(settleFrameRef.current);
-      settleFrameRef.current = null;
-    }
-  };
-
-  const startOpenAnimation = () => {
-    if (openStartedRef.current) return;
-    openStartedRef.current = true;
-    Animated.timing(progress, {
-      toValue: 1,
-      duration: OPEN_MS,
-      useNativeDriver: true,
-    }).start();
-  };
-
-  /**
-   * Starts the slide-up on the first frame after the window stops growing.
-   * Under `windowSoftInputMode="adjustResize"` the Modal's window opens while the
-   * IME inset still applies — short, its bottom edge travelling down as the
-   * keyboard leaves. The sheet is bottom-anchored, so a slide-up started at once
-   * runs against a moving anchor and visibly sinks into place. Each growth
-   * reschedules; with no keyboard it fires on the next frame. No timers.
-   */
-  const handleContainerLayout = (event: LayoutChangeEvent) => {
-    const { height } = event.nativeEvent.layout;
-    if (height <= tallestHeightRef.current) return;
-    tallestHeightRef.current = height;
-    cancelSettleFrame();
-    settleFrameRef.current = requestAnimationFrame(() => {
-      settleFrameRef.current = null;
-      startOpenAnimation();
-    });
-  };
-
   useEffect(() => {
     if (visible) {
       hasOpenedRef.current = true;
-      tallestHeightRef.current = 0;
-      openStartedRef.current = false;
-      // Mount right away; handleContainerLayout decides when to animate.
       setMounted(true);
-      return cancelSettleFrame;
+      Animated.timing(progress, {
+        toValue: 1,
+        duration: OPEN_MS,
+        useNativeDriver: true,
+      }).start();
+      return;
     }
 
     // Nothing to close on the initial mount (visible starts false).
-    if (!hasOpenedRef.current) return undefined;
+    if (!hasOpenedRef.current) return;
 
-    cancelSettleFrame();
     Animated.timing(progress, {
       toValue: 0,
       duration: CLOSE_MS,
@@ -116,11 +68,22 @@ export const TableSizePicker = ({ visible, onClose, onInsert, onClosed }: TableS
     }).start(({ finished }) => {
       if (!finished) return;
       setMounted(false);
-      // Defer past the unmount commit so the Modal's window is really gone first.
+      // Defer past the unmount commit, so the refocus in onClosed never runs
+      // against the overlay tree mid-teardown.
       setTimeout(() => onClosedRef.current?.(), 0);
     });
-    return undefined;
   }, [visible, progress]);
+
+  // The Android back button must close the sheet — the job RN Modal's
+  // onRequestClose did before this became a same-window overlay.
+  useEffect(() => {
+    if (!visible) return undefined;
+    const subscription = BackHandler.addEventListener('hardwareBackPress', () => {
+      onClose();
+      return true;
+    });
+    return () => subscription.remove();
+  }, [visible, onClose]);
 
   if (!mounted) return null;
 
@@ -130,10 +93,8 @@ export const TableSizePicker = ({ visible, onClose, onInsert, onClosed }: TableS
   });
 
   return (
-    // statusBarTranslucent: the Modal's own Android window does NOT inherit the
-    // app's edge-to-edge, so the backdrop would stop at the status bar.
-    <Modal visible transparent statusBarTranslucent animationType="none" onRequestClose={onClose}>
-      <View style={styles.container} onLayout={handleContainerLayout}>
+    <Portal hostName={DEFAULT_PORTAL_HOST}>
+      <View style={styles.overlay}>
         <Animated.View style={[StyleSheet.absoluteFill, styles.backdrop, { opacity: progress }]}>
           <Pressable style={StyleSheet.absoluteFill} onPress={onClose} />
         </Animated.View>
@@ -176,13 +137,14 @@ export const TableSizePicker = ({ visible, onClose, onInsert, onClosed }: TableS
           </View>
         </Animated.View>
       </View>
-    </Modal>
+    </Portal>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
+  overlay: {
+    ...StyleSheet.absoluteFill,
+    zIndex: 999,
     justifyContent: 'flex-end',
   },
   backdrop: {

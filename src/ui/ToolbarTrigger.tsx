@@ -5,6 +5,7 @@ import { TOOLBAR_HIT_SLOP, toolbarTargetStyles } from './toolbarTarget';
 
 export interface ToolbarTriggerProps {
   isActive?: boolean;
+  disabled?: boolean;
   /** Required when the content is icon-only: nothing else names the control. */
   accessibilityLabel?: string;
   onPress: () => void;
@@ -17,6 +18,7 @@ export interface ToolbarTriggerProps {
  */
 export const ToolbarTrigger = ({
   isActive = false,
+  disabled = false,
   accessibilityLabel,
   onPress,
   children,
@@ -26,9 +28,10 @@ export const ToolbarTrigger = ({
   return (
     <RichPressable
       onPress={onPress}
+      disabled={disabled}
       accessibilityRole="button"
       accessibilityLabel={accessibilityLabel}
-      accessibilityState={{ selected: isActive }}
+      accessibilityState={{ selected: isActive, disabled }}
       hitSlop={TOOLBAR_HIT_SLOP}
       style={[
         toolbarTargetStyles.target,

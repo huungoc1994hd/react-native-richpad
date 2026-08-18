@@ -10,9 +10,8 @@ export interface ToolbarButtonProps {
   disabled?: boolean;
   accessibilityLabel?: string;
   /**
-   * Defaults to 'button'. Pass 'radio' for a button that is one of a mutually
-   * exclusive set — the platform then announces it as a choice rather than as an
-   * independent toggle, and the active state is reported as `checked`.
+   * Defaults to 'button'. Pass 'radio' for one of a mutually exclusive set, so the
+   * platform announces it as a choice and reports the active state as `checked`.
    */
   accessibilityRole?: Extract<AccessibilityRole, 'button' | 'radio'>;
   onPress: () => void;

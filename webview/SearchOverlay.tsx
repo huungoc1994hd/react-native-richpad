@@ -5,11 +5,8 @@ import { getScrollContainer, toContentRect, type ContentRect } from './domUtils'
 import { getSearchState } from './extensions/searchHighlight';
 
 /**
- * Highlight overlay for in-note search — same architecture as ImageHandles:
- * portalled into the SCROLL CONTAINER with CONTENT COORDINATES, so it drifts
- * natively with scroll without touching ProseMirror internals (decorations crash
- * under dual-instance; WKWebView has no Custom Highlight API yet). Rects come
- * from a DOM Range, so a match wrapping across lines paints every segment.
+ * Highlight overlay for in-note search: portalled into the scroll container in CONTENT
+ * coordinates, so it drifts with scroll (PM decorations crash under dual-instance).
  */
 
 type OverlayState = { all: ContentRect[]; active: ContentRect[] };

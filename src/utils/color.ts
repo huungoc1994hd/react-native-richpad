@@ -1,5 +1,3 @@
-/** Color conversion utilities (HSV/RGB/HEX) for the color picker. */
-
 export function hsvToRgb(h: number, s: number, v: number) {
   let r: number = 0,
     g: number = 0,
