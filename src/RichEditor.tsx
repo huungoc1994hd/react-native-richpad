@@ -1,16 +1,20 @@
-import { forwardRef, useEffect, useImperativeHandle, useRef } from 'react';
+import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react';
 import { Platform, StyleProp, StyleSheet, TextInput, ViewStyle } from 'react-native';
-import Animated, { useAnimatedStyle } from 'react-native-reanimated';
+import Animated, { interpolate, useAnimatedStyle } from 'react-native-reanimated';
 import { RichText } from '@10play/tentap-editor';
 import { useRichEditorContext } from './context/RichEditorContext';
 import { useRichTheme } from './context/ThemeContext';
 import { useKeyboardSlide } from './hooks/useKeyboardSlide';
-import { setImeOpenerListener, clearImeOpenerListener } from './hooks/useEditorFocusManager';
+import {
+  setImeOpenerListener,
+  clearImeOpenerListener,
+  consumeImeOpenInvitation,
+} from './hooks/useEditorFocusManager';
+import { getBottomChromeHeight, subscribeBottomChromeHeight } from './hooks/hostChrome';
 
 const IS_ANDROID = Platform.OS === 'android';
-// Read outside the worklet below: a worklet that names `Platform` captures the
-// whole module into its closure, so Reanimated serializes seven native-backed
-// accessors to the UI runtime instead of one boolean.
+// Read outside the worklet: naming `Platform` inside one captures the whole module
+// into its closure.
 const IS_IOS = Platform.OS === 'ios';
 
 /**
@@ -19,7 +23,6 @@ const IS_IOS = Platform.OS === 'ios';
  */
 const GET_HTML_TIMEOUT_MS = 5000;
 
-/** Imperative handle exposed on the <RichEditor> ref. */
 export interface RichEditorRef {
   /**
    * Current document HTML. Rejects with `Error('richpad: getHTML timed out')`
@@ -43,12 +46,19 @@ export interface RichEditorProps {
 }
 
 /**
- * The editor WebView. Must be rendered inside <RichEditorProvider>. On iOS it
- * reserves bottom padding equal to the keyboard height plus the configured
- * offset, so content never hides behind the keyboard or the sticky bottom bar.
+ * The editor WebView. Must be rendered inside <RichEditorProvider>. On iOS it reserves
+ * the keyboard height plus the measured bottom toolbar as padding.
  */
 export const RichEditor = forwardRef<RichEditorRef, RichEditorProps>(({ style }, ref) => {
-  const { editor, focusManager, handleWebViewLoad, keyboardOffset } = useRichEditorContext();
+  const {
+    editor,
+    focusManager,
+    handleWebViewLoad,
+    handleWebViewTerminated,
+    webviewGeneration,
+    keyboardOffset,
+    bottomInset,
+  } = useRichEditorContext();
   const theme = useRichTheme();
   const background = theme.editor.backgroundColor;
 
@@ -78,23 +88,24 @@ export const RichEditor = forwardRef<RichEditorRef, RichEditorProps>(({ style },
     [editor, focusManager],
   );
 
-  // Same keyboard source as the sticky bottom bar (useKeyboardSlide), so padding
-  // and toolbar move in lockstep on open and close. height is NEGATIVE
-  // (0 → -keyboardHeight). iOS only; Android resizes the window (adjustResize).
-  const { height: keyboardHeight } = useKeyboardSlide();
+  // The bar's MEASURED height: a constant here shows as a band of this view's
+  // background between the WebView and the toolbar.
+  const [chromeReserve, setChromeReserve] = useState(getBottomChromeHeight);
+  useEffect(() => subscribeBottomChromeHeight(setChromeReserve), []);
+
+  // Same keyboard source as the sticky bottom bar, so padding and toolbar move in
+  // lockstep. Avoidance is iOS-only; the closed-keyboard floor is the host's inset.
+  const { height: keyboardHeight, progress: keyboardProgress } = useKeyboardSlide();
   const animatedStyle = useAnimatedStyle(() => {
     const kb = -keyboardHeight.value;
+    const insetFloor = interpolate(keyboardProgress.value, [0, 1], [bottomInset, 0]);
     return {
-      paddingBottom: IS_IOS && kb > 0 ? kb + keyboardOffset : 0,
+      paddingBottom: IS_IOS && kb > 0 ? kb + chromeReserve + keyboardOffset : insetFloor,
     };
-  });
+  }, [chromeReserve, keyboardOffset, bottomInset]);
 
-  // Android IME opener — the only way to raise the soft keyboard from JS (see
-  // setImeOpenerListener). It must stay MOUNTED for the editor's whole lifetime:
-  // unmounting a focused TextInput makes RN issue an explicit hideSoftInput, which
-  // Android honours over the WebView's implicit "new input attached" show — a
-  // mount/unmount helper closes the keyboard it just opened. Losing focus to the
-  // WebView is fine — only clearFocus/unmount hides the keyboard.
+  // Android IME opener (quirk 10). It must stay MOUNTED for the editor's lifetime:
+  // unmounting a focused TextInput makes RN hide the keyboard it just opened.
   const imeOpenerRef = useRef<TextInput>(null);
   useEffect(() => {
     if (!IS_ANDROID) return undefined;
@@ -104,9 +115,15 @@ export const RichEditor = forwardRef<RichEditorRef, RichEditorProps>(({ style },
   }, []);
 
   const handleImeOpenerFocus = () => {
-    // Keyboard is up and owned by this input. Re-assert the caret so the WebView
-    // answers Android's input-connection query as editable, then hand focus over.
-    editor.focus(null);
+    // Only an INVITED focus runs the dance: Android's focus search can land here on
+    // its own, and that must not touch the keyboard or DOM focus.
+    if (!consumeImeOpenInvitation()) {
+      imeOpenerRef.current?.blur();
+      return;
+    }
+    // Keyboard is up and owned by this input: return DOM focus to whichever host owns
+    // the session, then hand the input connection to the WebView.
+    editor.restoreInputFocus();
     editor.webviewRef?.current?.requestFocus?.();
   };
 
@@ -115,8 +132,13 @@ export const RichEditor = forwardRef<RichEditorRef, RichEditorProps>(({ style },
       style={[styles.container, { backgroundColor: background }, animatedStyle, style]}
     >
       <RichText
+        // Remount on renderer death: a WebView whose process was killed is a dead
+        // view, not a reloadable one.
+        key={`richpad-webview-${webviewGeneration}`}
         editor={editor}
         onLoad={handleWebViewLoad}
+        onRenderProcessGone={handleWebViewTerminated}
+        onContentProcessDidTerminate={handleWebViewTerminated}
         style={{ backgroundColor: background }}
       />
       {IS_ANDROID && (

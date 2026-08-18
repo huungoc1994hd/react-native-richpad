@@ -1,26 +1,19 @@
 import { Fragment, useState, type ReactNode } from 'react';
-import {
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
-  type StyleProp,
-  type ViewStyle,
-} from 'react-native';
-import LinearGradient from 'react-native-linear-gradient';
+import { ScrollView, StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-native';
 import Animated, { interpolate, useAnimatedStyle } from 'react-native-reanimated';
 import { useBridgeState } from '@10play/tentap-editor';
 import { useKeyboardSlide } from '../hooks/useKeyboardSlide';
+import { setBottomChromeHeight } from '../hooks/hostChrome';
 import { ToolbarButton } from '../ui/ToolbarButton';
-import { RichPressable } from '../ui/RichPressable';
 import { RichIcon, type RichIconName } from '../ui/RichIcon';
 import { PopoverMenu } from '../ui/popover/PopoverMenu';
 import { usePopover } from '../ui/popover/PopoverContext';
+import { ColorMenuContent } from './bottom/ColorMenuContent';
+import { LinkMenuContent } from './bottom/LinkMenuContent';
+import type { ColorTarget } from './bottom/types';
 import { ColorPickerModal } from '../ui/ColorPickerModal';
 import { useRichEditorContext } from '../context/RichEditorContext';
 import { useRichTheme } from '../context/ThemeContext';
-import { isSameColor } from '../utils/color';
 import type { TextAlignment } from '../protocol';
 import { useLabels } from '../context/LabelsContext';
 import type { ToolbarItem, BottomBarFeatureFlags } from './types';
@@ -29,216 +22,7 @@ import { CustomToolbarItems } from './CustomToolbarItems';
 import { ToolbarTrigger } from '../ui/ToolbarTrigger';
 import { toolbarTargetStyles } from '../ui/toolbarTarget';
 
-type ColorTarget = 'text' | 'highlight';
-
 const BOTTOM_BAR_ESTIMATED_HEIGHT = 56;
-
-/** Rainbow ring shown around the custom-color button when the color is off-preset. */
-const RAINBOW_GRADIENT = [
-  '#FF3B30',
-  '#FF9500',
-  '#FFCC00',
-  '#4CD964',
-  '#5AC8FA',
-  '#007AFF',
-  '#5856D6',
-];
-
-const isPreset = (colors: string[], color?: string) => colors.some(c => isSameColor(c, color));
-
-/** Normalize a user-entered URL: default the scheme to https:// when missing. */
-const normalizeHref = (raw: string): string => {
-  const trimmed = raw.trim();
-  if (!trimmed) return '';
-  return /^[a-z][a-z0-9+.-]*:/i.test(trimmed) ? trimmed : `https://${trimmed}`;
-};
-
-/** A preset color swatch — closes the popover after selection. */
-const ColorSwatchButton = ({
-  color,
-  isActive,
-  onSelect,
-}: {
-  color: string;
-  isActive: boolean;
-  onSelect: (color: string) => void;
-}) => {
-  const theme = useRichTheme();
-  const { closePopover } = usePopover();
-  return (
-    <RichPressable
-      onPress={() => {
-        onSelect(color);
-        closePopover();
-      }}
-      noFeedback
-      accessibilityRole="button"
-      accessibilityLabel={color}
-      accessibilityState={{ selected: isActive }}
-      style={[
-        styles.swatch,
-        {
-          backgroundColor: color,
-          borderWidth: isActive ? 2 : 1,
-          borderColor: isActive ? theme.toolbar.accent : theme.toolbar.divider,
-        },
-        isActive ? styles.swatchActive : null,
-      ]}
-    ></RichPressable>
-  );
-};
-
-/** Opens the color picker — shows a gradient ring when the current color is off-preset. */
-const CustomColorButton = ({
-  target,
-  colors,
-  currentColor,
-  onOpenPicker,
-}: {
-  target: ColorTarget;
-  colors: string[];
-  currentColor?: string;
-  onOpenPicker: (target: ColorTarget) => void;
-}) => {
-  const theme = useRichTheme();
-  const { closePopover } = usePopover();
-
-  const presetActive =
-    target === 'text'
-      ? isPreset(colors, currentColor)
-      : !currentColor || isPreset(colors, currentColor);
-
-  const handleOpen = () => {
-    onOpenPicker(target);
-    closePopover();
-  };
-
-  if (presetActive) {
-    return (
-      <RichPressable
-        onPress={handleOpen}
-        style={[styles.customColorPlus, { backgroundColor: theme.toolbar.itemActiveBackground }]}
-      >
-        <RichIcon name="add" size={16} color={theme.toolbar.icon} />
-      </RichPressable>
-    );
-  }
-  return (
-    <RichPressable onPress={handleOpen} noFeedback>
-      <LinearGradient
-        colors={RAINBOW_GRADIENT}
-        start={{ x: 0, y: 0.5 }}
-        end={{ x: 1, y: 0.5 }}
-        style={styles.customColorRing}
-      >
-        <View style={[styles.customColorRingInner, { backgroundColor: theme.toolbar.surface }]}>
-          <View style={[styles.customColorDot, { backgroundColor: currentColor }]} />
-        </View>
-      </LinearGradient>
-    </RichPressable>
-  );
-};
-
-const ClosePopoverButton = () => {
-  const theme = useRichTheme();
-  const { closePopover } = usePopover();
-  return (
-    <RichPressable
-      onPress={() => closePopover()}
-      style={[styles.closeButton, { backgroundColor: theme.toolbar.itemActiveBackground }]}
-    >
-      <RichIcon name="close" size={16} color={theme.toolbar.icon} />
-    </RichPressable>
-  );
-};
-
-/**
- * Link add/edit popover, laid out like an iOS alert: centered title, inset field,
- * action row split by a hairline. No X button — tap outside to close. Remounts on
- * each open, so the field prefills via useState.
- */
-const LinkMenuContent = ({
-  initialHref,
-  onApply,
-  onRemove,
-}: {
-  initialHref: string;
-  onApply: (href: string) => void;
-  onRemove: () => void;
-}) => {
-  const theme = useRichTheme();
-  const labels = useLabels();
-  const { closePopover } = usePopover();
-  const [href, setHref] = useState(initialHref);
-  const canApply = href.trim().length > 0;
-
-  return (
-    <View style={styles.fullWidth}>
-      <Text style={[styles.linkTitle, { color: theme.toolbar.text }]}>{labels.linkTitle}</Text>
-      <TextInput
-        value={href}
-        onChangeText={setHref}
-        placeholder={labels.linkPlaceholder}
-        placeholderTextColor={theme.toolbar.textMuted}
-        autoCapitalize="none"
-        autoCorrect={false}
-        keyboardType="url"
-        // autoFocus: the URL keyboard is shorter than the editor's (no QuickType bar)
-        // → the toolbar drops; PopoverMenu re-measures on keyboard events and follows.
-        autoFocus
-        clearButtonMode="while-editing"
-        style={[
-          styles.linkInput,
-          // Themed inline, not in the stylesheet: the fixed light palette rendered
-          // black text on the dark surface.
-          { backgroundColor: theme.toolbar.itemActiveBackground, color: theme.toolbar.text },
-        ]}
-      />
-      <View style={[styles.hairline, { backgroundColor: theme.toolbar.divider }]} />
-      <View style={styles.linkActions}>
-        {!!initialHref && (
-          <>
-            <RichPressable
-              style={styles.linkAction}
-              onPress={() => {
-                onRemove();
-                closePopover();
-              }}
-            >
-              <View style={styles.linkActionInner}>
-                <Text style={[styles.linkActionText, { color: theme.toolbar.danger }]}>
-                  {labels.linkRemove}
-                </Text>
-              </View>
-            </RichPressable>
-            <View style={[styles.hairlineVertical, { backgroundColor: theme.toolbar.divider }]} />
-          </>
-        )}
-        <RichPressable
-          style={styles.linkAction}
-          disabled={!canApply}
-          onPress={() => {
-            if (!canApply) return;
-            onApply(normalizeHref(href));
-            closePopover();
-          }}
-        >
-          <View style={styles.linkActionInner}>
-            <Text
-              style={[
-                styles.linkActionText,
-                styles.linkActionApply,
-                { color: canApply ? theme.toolbar.accent : theme.toolbar.textMuted },
-              ]}
-            >
-              {labels.linkApply}
-            </Text>
-          </View>
-        </RichPressable>
-      </View>
-    </View>
-  );
-};
 
 /** An alignment choice — closes the popover after selection. */
 const AlignmentButton = ({
@@ -272,66 +56,12 @@ const AlignmentButton = ({
   );
 };
 
-/** Color menu (text or highlight) with a preset row + a custom-picker opener. */
-const ColorMenuContent = ({
-  title,
-  target,
-  colors,
-  currentColor,
-  onSelectColor,
-  onOpenPicker,
-}: {
-  title: string;
-  target: ColorTarget;
-  colors: string[];
-  currentColor?: string;
-  onSelectColor: (color: string) => void;
-  onOpenPicker: (target: ColorTarget) => void;
-}) => {
-  const theme = useRichTheme();
-  return (
-    <View style={styles.colorMenu}>
-      <View style={styles.colorMenuHeader}>
-        <Text style={[styles.colorMenuTitle, { color: theme.toolbar.text }]}>{title}</Text>
-        <ClosePopoverButton />
-      </View>
-
-      <View style={styles.colorMenuRow}>
-        <View style={styles.colorMenuScroll}>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-            <View style={styles.colorMenuSwatches}>
-              {colors.map(c => (
-                <ColorSwatchButton
-                  key={c}
-                  color={c}
-                  isActive={isSameColor(currentColor, c)}
-                  onSelect={onSelectColor}
-                />
-              ))}
-            </View>
-          </ScrollView>
-        </View>
-
-        <View style={[styles.colorMenuCustom, { borderLeftColor: theme.toolbar.divider }]}>
-          <CustomColorButton
-            target={target}
-            colors={colors}
-            currentColor={currentColor}
-            onOpenPicker={onOpenPicker}
-          />
-        </View>
-      </View>
-    </View>
-  );
-};
-
 export interface RichEditorBottomBarProps {
   /** Pin the bar to the keyboard (default true). */
   stickToKeyboard?: boolean;
   /**
-   * Extra bottom offset applied while the keyboard is open (e.g. a tab bar /
-   * safe area). Distinct from `UseRichEditorOptions.keyboardOffset`, which
-   * reserves scroll space above the keyboard.
+   * Extra bottom offset while the keyboard is open (a tab bar / safe area). Distinct
+   * from UseRichEditorOptions.keyboardOffset, which reserves space above this bar.
    */
   bottomOffset?: number;
   /** Toggle built-in tools. Each tool is shown unless set to false. */
@@ -352,7 +82,7 @@ export const RichEditorBottomBar = ({
   items,
   style,
 }: RichEditorBottomBarProps) => {
-  const { editor } = useRichEditorContext();
+  const { editor, captionFocused, focusManager } = useRichEditorContext();
   const theme = useRichTheme();
   const labels = useLabels();
   const editorState = useBridgeState(editor);
@@ -361,9 +91,8 @@ export const RichEditorBottomBar = ({
 
   const [barHeight, setBarHeight] = useState(BOTTOM_BAR_ESTIMATED_HEIGHT);
 
-  // Slides with the keyboard off the same source as the editor padding. Same
-  // geometry as keyboard-controller's KeyboardStickyView, but driven by
-  // useKeyboardSlide so it animates on OPEN too (see the hook for why).
+  // Slides off the same source as the editor padding, so bar and content move in
+  // lockstep — and unlike KeyboardStickyView it animates on OPEN too.
   const { height: kbHeight, progress: kbProgress } = useKeyboardSlide();
   const stickyStyle = useAnimatedStyle(
     () => ({
@@ -472,9 +201,8 @@ export const RichEditorBottomBar = ({
                   <View style={styles.colorTriggerGlyph}>
                     <RichIcon name="format-color-fill" size={24} color={theme.toolbar.icon} />
                   </View>
-                  {/* With no highlight the swatch shows the document's own background —
-                      the color the text actually sits on. It reads against the toolbar
-                      because the bar and the document use different surfaces. */}
+                  {/* With no highlight the swatch shows the document background — the
+                      color the text actually sits on, not the toolbar's surface. */}
                   <View
                     style={[
                       styles.colorTriggerBar,
@@ -538,20 +266,29 @@ export const RichEditorBottomBar = ({
             <PopoverMenu
               placement="top"
               contentWidth={300}
-              // Any close path (set/remove/tap outside) returns focus to the editor.
-              onClose={() => editor.focus(null)}
+              // refocusNow MUST run BEFORE this popover unmounts, or RN hides the
+              // keyboard along with the field (quirk 10).
+              onClose={() => focusManager.refocusNow()}
               trigger={(triggerProps, isOpen) => (
                 <ToolbarButton
                   accessibilityLabel={labels.linkTitle}
                   icon="link"
                   isActive={!!editorState.activeLinkHref || isOpen}
-                  onPress={triggerProps.onPress}
+                  onPress={() => {
+                    // Freeze the selection BEFORE the URL field takes the keyboard:
+                    // Android clears the DOM selection when the WebView is unfocused.
+                    editor.saveSelection();
+                    triggerProps.onPress();
+                  }}
                 />
               )}
             >
               <LinkMenuContent
                 initialHref={editorState.activeLinkHref ?? ''}
-                onApply={href => editor.setLink(href)}
+                // Editing a link prefills its own text, creating one prefills the
+                // selection. Empty means "use the URL".
+                initialText={editorState.activeLinkText ?? editorState.selectionText ?? ''}
+                onApply={(href, text) => editor.setLink(href, text)}
                 onRemove={() => editor.unlink()}
               />
             </PopoverMenu>
@@ -652,7 +389,13 @@ export const RichEditorBottomBar = ({
 
   const bar = (
     <View
-      onLayout={event => setBarHeight(event.nativeEvent.layout.height)}
+      onLayout={event => {
+        const { height } = event.nativeEvent.layout;
+        setBarHeight(height);
+        // How much of the WebView this bar covers while the keyboard is up — the
+        // page cannot see a native view (see hostChrome).
+        setBottomChromeHeight(height + bottomOffset);
+      }}
       style={[
         styles.bar,
         { backgroundColor: theme.toolbar.background, borderTopColor: theme.toolbar.divider },
@@ -660,7 +403,14 @@ export const RichEditorBottomBar = ({
       ]}
     >
       <View style={styles.barRow}>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+        {/* Disabled during caption input: their commands run chain().focus(), which
+            steals focus from the caption. Select-all is document-level, so it stays. */}
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          style={captionFocused ? styles.formatGroupsDisabled : null}
+          pointerEvents={captionFocused ? 'none' : 'auto'}
+        >
           <View style={styles.scrollRow}>
             {groups.map((group, index) => (
               <Fragment key={group.key}>
@@ -682,10 +432,13 @@ export const RichEditorBottomBar = ({
                 onPress={() => editor.selectAll()}
               />
             )}
+            {/* Plain text has no formatting to clear, so this is disabled during
+                caption input; its command also runs chain().focus(). */}
             {showClearFormat && (
               <ToolbarButton
                 accessibilityLabel={labels.clearFormatting}
                 icon="format-clear"
+                disabled={captionFocused}
                 onPress={() => editor.clearFormatting()}
               />
             )}
@@ -714,10 +467,13 @@ export const RichEditorBottomBar = ({
 };
 
 const styles = StyleSheet.create({
-  sticky: {
-    position: 'absolute',
-    bottom: 0,
-    width: '100%',
+  alignRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  alignTriggerGap: {
+    gap: 4,
   },
   bar: {
     width: '100%',
@@ -730,56 +486,17 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
   },
-  scrollRow: {
-    flexDirection: 'row',
+  colorTriggerBar: {
+    height: 4,
+    width: 22,
+    marginTop: 1,
+  },
+  colorTriggerGlyph: {
+    height: 20,
+    overflow: 'hidden',
     alignItems: 'center',
-    gap: 4,
+    justifyContent: 'flex-start',
   },
-  pinned: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  swatch: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-  },
-  swatchActive: {
-    transform: [{ scale: 1.1 }],
-  },
-  customColorPlus: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  customColorRing: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  customColorRingInner: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  customColorDot: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-  },
-  closeButton: {
-    padding: 4,
-    borderRadius: 999,
-  },
-  // 25 = glyph 20 + bar marginTop 1 + bar 4. An inner box shorter than its
-  // contents centers the overflow onto half-pixel rows, which anti-aliases the
-  // swatch into looking thicker than it is.
   colorTriggerInner: {
     alignItems: 'center',
     justifyContent: 'center',
@@ -791,105 +508,21 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     lineHeight: 20,
   },
-  // Both triggers put their glyph in this box, so each swatch is positioned by
-  // the same explicit height. Laying the letter out by its own text metrics
-  // instead would round to a different subpixel than the icon's box.
-  colorTriggerGlyph: {
-    height: 20,
-    overflow: 'hidden',
-    alignItems: 'center',
-    justifyContent: 'flex-start',
+  formatGroupsDisabled: {
+    opacity: 0.35,
   },
-  // One width for both swatches: the two triggers sit side by side, so unequal
-  // bars read as unequal thickness even though the height is shared.
-  colorTriggerBar: {
-    height: 4,
-    width: 22,
-    marginTop: 1,
-  },
-  colorMenu: {
-    gap: 12,
-  },
-  colorMenuHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 8,
-  },
-  colorMenuTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-  colorMenuRow: {
-    flexDirection: 'row',
-    width: '100%',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  colorMenuScroll: {
-    flex: 1,
-  },
-  colorMenuSwatches: {
+  pinned: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
-    paddingVertical: 4,
-    paddingLeft: 8,
-    paddingRight: 24,
   },
-  colorMenuCustom: {
-    paddingLeft: 8,
-    borderLeftWidth: 1,
-    alignSelf: 'stretch',
-    justifyContent: 'center',
-  },
-  alignTriggerGap: {
+  scrollRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
     gap: 4,
   },
-  alignRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  fullWidth: {
+  sticky: {
+    position: 'absolute',
+    bottom: 0,
     width: '100%',
-  },
-  linkTitle: {
-    textAlign: 'center',
-    fontSize: 17,
-    fontWeight: '600',
-    marginBottom: 12,
-  },
-  linkInput: {
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    height: 44,
-    fontSize: 17,
-    marginBottom: 10,
-  },
-  hairline: {
-    height: StyleSheet.hairlineWidth,
-  },
-  hairlineVertical: {
-    width: StyleSheet.hairlineWidth,
-  },
-  linkActions: {
-    flexDirection: 'row',
-    alignItems: 'stretch',
-  },
-  linkAction: {
-    flex: 1,
-  },
-  linkActionInner: {
-    paddingTop: 10,
-    paddingBottom: 6,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  linkActionText: {
-    fontSize: 17,
-  },
-  linkActionApply: {
-    fontWeight: '600',
   },
 });

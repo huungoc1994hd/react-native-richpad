@@ -1,13 +1,13 @@
-import { useState, useRef, useEffect, type ReactNode } from 'react';
+import { useCallback, useState, useRef, type ReactNode } from 'react';
 import {
-  Keyboard,
   Pressable,
   StyleSheet,
   View,
   useWindowDimensions,
   type DimensionValue,
 } from 'react-native';
-import Animated, { LinearTransition, ZoomIn, ZoomOut } from 'react-native-reanimated';
+import { useKeyboardHandler } from 'react-native-keyboard-controller';
+import Animated, { LinearTransition, ZoomIn, ZoomOut, runOnJS } from 'react-native-reanimated';
 import { Portal } from '@gorhom/portal';
 import { PopoverContext } from './PopoverContext';
 import { useRichTheme } from '../../context/ThemeContext';
@@ -38,12 +38,12 @@ export const PopoverMenu = ({
   const triggerRef = useRef<View>(null);
   const { width: screenWidth, height: screenHeight } = useWindowDimensions();
 
-  const measureTrigger = (onMeasured?: () => void) => {
+  const measureTrigger = useCallback((onMeasured?: () => void) => {
     triggerRef.current?.measure((_x, _y, width, height, pageX, pageY) => {
       setCoords({ x: pageX, y: pageY, width, height });
       onMeasured?.();
     });
-  };
+  }, []);
 
   // Open only after the measure lands so the menu never flashes at (0, 0).
   const handleOpen = () =>
@@ -52,26 +52,23 @@ export const PopoverMenu = ({
       onOpen?.();
     });
 
-  // The keyboard frame can change while the popover is open (focusing an input
-  // inside it swaps the keyboard type/height → the toolbar holding the trigger
-  // moves), so re-measure. Keyboard events fire RIGHT at the animation edge, so a
-  // single measure catches the old frame; several delays converge on the final one.
-  useEffect(() => {
-    if (!isOpen) return;
-    const timers: ReturnType<typeof setTimeout>[] = [];
-    const remeasureSettled = () => {
-      measureTrigger();
-      [120, 320, 600, 1000].forEach(delay => {
-        timers.push(setTimeout(measureTrigger, delay));
-      });
-    };
-    const events = ['keyboardDidShow', 'keyboardDidHide', 'keyboardDidChangeFrame'] as const;
-    const subscriptions = events.map(event => Keyboard.addListener(event, remeasureSettled));
-    return () => {
-      subscriptions.forEach(subscription => subscription.remove());
-      timers.forEach(clearTimeout);
-    };
-  }, [isOpen]);
+  // The keyboard frame can change while the popover is open, and the toolbar moves
+  // with it. Re-measure when the animation ENDS — the first moment it is final.
+  const openRef = useRef(isOpen);
+  openRef.current = isOpen;
+  const remeasureIfOpen = useCallback(() => {
+    if (openRef.current) measureTrigger();
+  }, [measureTrigger]);
+
+  useKeyboardHandler(
+    {
+      onEnd: () => {
+        'worklet';
+        runOnJS(remeasureIfOpen)();
+      },
+    },
+    [remeasureIfOpen],
+  );
 
   const handleClose = () => {
     setIsOpen(false);
@@ -88,6 +85,11 @@ export const PopoverMenu = ({
 
   if (isRightAligned) {
     rightPosition = Math.max(8, screenWidth - (coords.x + coords.width));
+    // Symmetric clamp with the left-aligned branch: a right-anchored popover wider
+    // than the space left of its trigger would poke past the LEFT screen edge.
+    if (typeof contentWidth === 'number' && rightPosition + contentWidth > screenWidth - 8) {
+      rightPosition = Math.max(8, screenWidth - contentWidth - 8);
+    }
   } else {
     leftPosition = Math.max(8, coords.x);
     if (typeof contentWidth === 'number' && leftPosition + contentWidth > screenWidth - 8) {
@@ -95,10 +97,8 @@ export const PopoverMenu = ({
     }
   }
 
-  // ANCHOR ON THE TRIGGER'S VERTICAL CENTER, not its top/bottom edge: buttons in a
-  // toolbar row (alignItems center) share a y-center at different heights, so
-  // edge-anchoring would push a tall button's popover higher than a short one's.
-  // CENTER_GAP 30 = half the standard button height (20) + 10 padding.
+  // Anchor on the trigger's vertical CENTRE: toolbar buttons share a y-centre at
+  // different heights, so edge-anchoring would misalign their popovers.
   const CENTER_GAP = 30;
   const triggerCenterY = coords.y + coords.height / 2;
   if (placement === 'top') {
@@ -139,7 +139,10 @@ export const PopoverMenu = ({
           <View style={styles.overlay}>
             <Pressable style={styles.backdrop} onPress={handleClose} />
 
-            <View
+            <Animated.View
+              // Slide, don't jump, when the trigger is re-measured. The position props
+              // live on THIS view, so the layout transition must too.
+              layout={LinearTransition.duration(180)}
               style={[
                 styles.card,
                 {
@@ -154,9 +157,6 @@ export const PopoverMenu = ({
               <Animated.View
                 entering={ZoomIn.duration(200)}
                 exiting={ZoomOut.duration(150)}
-                // Slide, don't jump, when the trigger is re-measured (the toolbar
-                // moves with the keyboard).
-                layout={LinearTransition.duration(180)}
                 style={[
                   styles.content,
                   {
@@ -170,7 +170,7 @@ export const PopoverMenu = ({
                   {children}
                 </PopoverContext.Provider>
               </Animated.View>
-            </View>
+            </Animated.View>
           </View>
         </Portal>
       )}

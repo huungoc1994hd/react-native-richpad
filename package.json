@@ -1,6 +1,6 @@
 {
   "name": "react-native-richpad",
-  "version": "1.0.5",
+  "version": "1.0.6",
   "description": "A WebView-based rich-text editor for React Native (iOS + Android) with tables, images, search, and a fully themeable toolbar.",
   "source": "./src/index.ts",
   "main": "./src/index.ts",
@@ -11,6 +11,7 @@
     "src",
     "lib",
     "README.md",
+    "CHANGELOG.md",
     "!**/__tests__",
     "!**/*.test.ts",
     "!**/*.test.tsx"
@@ -18,8 +19,10 @@
   "sideEffects": false,
   "scripts": {
     "typecheck": "tsc --noEmit",
-    "lint": "eslint . && prettier --check .",
+    "lint": "eslint . && prettier --check . && npm run lint:language && npm run lint:docs",
     "lint:fix": "eslint . --fix && prettier --write .",
+    "lint:language": "node scripts/check-comment-language.mjs",
+    "lint:docs": "node scripts/check-doc-refs.mjs",
     "build": "bob build",
     "build:webview": "cd webview && npm ci && npm run build && node smoke-test.mjs",
     "build:webview:offline": "cd webview && npm install --prefer-offline --no-audit --no-fund && npm run build && node smoke-test.mjs",

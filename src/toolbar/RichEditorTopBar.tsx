@@ -27,7 +27,6 @@ import { CustomToolbarItems } from './CustomToolbarItems';
 import { ToolbarTrigger } from '../ui/ToolbarTrigger';
 import { toolbarTargetStyles } from '../ui/toolbarTarget';
 
-/** Debounce for sending the search query to the WebView (ms). */
 const SEARCH_DEBOUNCE_MS = 200;
 
 type HeadingLevel = Parameters<EditorBridge['toggleHeading']>[0];
@@ -65,25 +64,29 @@ export const RichEditorTopBar = ({
   fontSizeOptions = DEFAULT_FONT_SIZE_OPTIONS,
   style,
 }: RichEditorTopBarProps) => {
-  const { editor, focusManager, resolvedHeadingOptions } = useRichEditorContext();
+  const {
+    editor,
+    focusManager,
+    resolvedHeadingOptions,
+    captionFocused,
+    imageSessionActive,
+    leaveImageSession,
+    releaseHostInput,
+  } = useRichEditorContext();
   const theme = useRichTheme();
   const labels = useLabels();
   const editorState = useBridgeState(editor);
 
-  // The heading options follow the locale unless the consumer overrides them.
   const headings = headingOptions ?? resolvedHeadingOptions;
 
   const on = (feature: keyof TopBarFeatureFlags) => features?.[feature] !== false;
 
   const headingLevel = editorState.headingLevel;
   const isHeadingActive = !!headingLevel;
-  // No font-size mark = the default size is in use → the menu marks the default.
-  // `||`, NOT `??`: an empty string reaches here whenever the selection sits in a
-  // textStyle mark that carries no font-size, and `??` would let it through and
-  // blank the label.
+  // No font-size mark = the default is in use. `||` not `??`: an empty string comes
+  // from a textStyle mark carrying no size, and would blank the label.
   const currentFontSize = editorState.fontSize || theme.editor.fontSize;
 
-  // --- In-document search ---
   const [isSearching, setIsSearching] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const searchDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -97,23 +100,42 @@ export const RichEditorTopBar = ({
     return () => {
       if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current);
     };
-    // editor omitted: its identity changes every render, but the method is a
-    // stable proxy over the WebView ref inside tentap.
+    // editor omitted: its identity changes every render, the method is stable.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchQuery, isSearching]);
 
+  const pendingSearchRef = useRef(false);
+
   // The search TextInput carries autoFocus — no manual focus timer needed.
   const openSearch = () => {
+    // End any image session and WAIT for the teardown before mounting the search
+    // field: mounting early races the caption blur for native focus.
+    if (imageSessionActive) {
+      pendingSearchRef.current = true;
+      leaveImageSession();
+      return;
+    }
     setIsSearching(true);
   };
+
+  // Open the deferred search field once the image session has torn down —
+  // event-driven, no timer.
+  useEffect(() => {
+    if (!imageSessionActive && pendingSearchRef.current) {
+      pendingSearchRef.current = false;
+      setIsSearching(true);
+    }
+  }, [imageSessionActive]);
 
   const closeSearch = () => {
     setIsSearching(false);
     setSearchQuery('');
     editor.clearSearch();
-    // Refocus AFTER this unmount, never before: RN issues an explicit
-    // hideSoftInput when the focused search input goes away, which would cancel
-    // an earlier show. requestFocus is debounced, so it lands once it is gone.
+    // An unmount may not fire onBlur, so release ownership explicitly before
+    // handing focus back.
+    releaseHostInput();
+    // Refocus AFTER this unmount: RN issues a hideSoftInput when the focused search
+    // input goes away, which would cancel an earlier show.
     focusManager.requestFocus();
   };
 
@@ -125,25 +147,24 @@ export const RichEditorTopBar = ({
         ? `${(editorState.searchActiveIndex ?? 0) + 1}/${matchCount}`
         : '0';
 
-  // --- Table ---
   const [isTablePickerOpen, setIsTablePickerOpen] = useState(false);
 
   const openTablePicker = () => {
     if (editorState.isTableActive) return;
     focusManager.suspend(FocusSuspendReason.TableSheet);
+    // Opens in PARALLEL with the keyboard hide: the sheet lives in the app's own
+    // window, so there is no handoff for the system to re-show the IME through.
     setIsTablePickerOpen(true);
   };
 
-  // Resume runs in the sheet's onClosed, not here: while its Modal window lives the
-  // IME serves that window, so a request from here is rejected (PHASE_CLIENT_VIEW_SERVED).
+  // Resume runs in the sheet's onClosed, not here: the refocus belongs after
+  // the close animation and the overlay's unmount, not racing them.
   const closeTablePicker = () => {
     setIsTablePickerOpen(false);
   };
 
-  // --- Keyboard policy ---
-  // Undo/redo/heading/font-size do NOT suspend → the keyboard stays up.
-  // Image menu / table picker open an overlay → suspend via focusManager and
-  // resume when it closes (cancel) or the action completes → the editor refocuses.
+  // Keyboard policy: plain actions do NOT suspend, so the keyboard stays up; anything
+  // opening an overlay suspends and resumes through focusManager.
   const handleImageMenuOpen = () => focusManager.suspend(FocusSuspendReason.ImageMenu);
   const handleImageMenuClose = () => focusManager.resume(FocusSuspendReason.ImageMenu);
 
@@ -160,9 +181,8 @@ export const RichEditorTopBar = ({
     return () => {
       mountedRef.current = false;
       if (pickImageTimerRef.current) clearTimeout(pickImageTimerRef.current);
-      // focusManager OUTLIVES this bar, so a reason left active keeps the keyboard
-      // locked for whatever mounts next — and the clearTimeout above may have
-      // cancelled the callback that releases it. refocus:false: nothing to focus.
+      // focusManager OUTLIVES this bar, so a reason left active locks the keyboard for
+      // whatever mounts next. refocus:false — there is nothing to focus.
       if (isPickingRef.current) {
         isPickingRef.current = false;
         focusManager.resume(FocusSuspendReason.ImagePicking, { refocus: false });
@@ -186,8 +206,7 @@ export const RichEditorTopBar = ({
       } catch {
         // The consumer's pick/upload failed — fall through to restore focus.
       } finally {
-        // Every path (insert/cancel/error) resumes → the editor refocuses. A newly
-        // selected image re-suspends before the debounced refocus, so no flicker.
+        // Every path (insert/cancel/error) resumes → the editor refocuses.
         // Unmounted mid-flight: the cleanup effect already released the reason.
         isPickingRef.current = false;
         if (mountedRef.current) {
@@ -222,6 +241,8 @@ export const RichEditorTopBar = ({
         style,
       ]}
     >
+      {/* Disabled during caption input: their commands run chain().focus(), which
+          steals focus from the caption and reveals the image instead. */}
       <View style={styles.row}>
         {on('history') && (
           <>
@@ -247,7 +268,11 @@ export const RichEditorTopBar = ({
             trigger={(triggerProps, isOpen) => {
               const active = isHeadingActive || isOpen;
               return (
-                <ToolbarTrigger onPress={triggerProps.onPress} isActive={active}>
+                <ToolbarTrigger
+                  onPress={triggerProps.onPress}
+                  isActive={active}
+                  disabled={captionFocused}
+                >
                   <View style={toolbarTargetStyles.row}>
                     <Text style={[styles.headingLabel, { color: menuTriggerColor(active) }]}>
                       Aa
@@ -273,7 +298,11 @@ export const RichEditorTopBar = ({
         {on('fontSize') && (
           <PopoverMenu
             trigger={(triggerProps, isOpen) => (
-              <ToolbarTrigger onPress={triggerProps.onPress} isActive={isOpen}>
+              <ToolbarTrigger
+                onPress={triggerProps.onPress}
+                isActive={isOpen}
+                disabled={captionFocused}
+              >
                 <View style={toolbarTargetStyles.row}>
                   <Text style={[styles.fontSizeLabel, { color: menuTriggerColor(isOpen) }]}>
                     {currentFontSize.replace('px', '')}
@@ -306,6 +335,7 @@ export const RichEditorTopBar = ({
             accessibilityLabel={labels.insertTable}
             icon="table-chart"
             isActive={editorState.isTableActive}
+            disabled={captionFocused}
             onPress={openTablePicker}
           />
         )}
@@ -319,6 +349,7 @@ export const RichEditorTopBar = ({
                 accessibilityLabel={labels.insertImage}
                 icon="image"
                 isActive={isOpen}
+                disabled={captionFocused}
                 onPress={triggerProps.onPress}
               />
             )}
@@ -368,6 +399,14 @@ export const RichEditorTopBar = ({
               autoCorrect={false}
               returnKeyType="search"
               onSubmitEditing={() => editor.searchNext()}
+              // Tapping the field DIRECTLY while an image session is open: end it here
+              // too, so the report in flight is ignored instead of obeyed.
+              onFocus={() => {
+                if (imageSessionActive) leaveImageSession();
+              }}
+              // The field RELEASES the keyboard: hand ownership back immediately.
+              // Left at the host it would swallow later recovery refocuses.
+              onBlur={() => releaseHostInput()}
               style={[styles.searchInput, { color: theme.toolbar.text }]}
             />
             {matchLabel !== '' && (

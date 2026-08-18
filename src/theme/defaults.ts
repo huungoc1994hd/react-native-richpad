@@ -1,6 +1,5 @@
 import type { HeadingOption, RichEditorLabels, RichTheme } from './types';
 
-/** English default labels for the toolbars. */
 export const DEFAULT_LABELS: RichEditorLabels = {
   imagePickLibrary: 'Choose from library',
   imagePickCamera: 'Take a photo',
@@ -30,8 +29,10 @@ export const DEFAULT_LABELS: RichEditorLabels = {
   alignRight: 'Align right',
   alignJustify: 'Justify',
   linkTitle: 'Link',
+  linkTextPlaceholder: 'Display text (optional)',
   linkPlaceholder: 'https://…',
   linkApply: 'Set link',
+  linkUpdate: 'Update',
   linkRemove: 'Remove link',
   tableTitle: 'Table properties',
   tableRows: 'Rows',
@@ -47,7 +48,6 @@ export const DEFAULT_LABELS: RichEditorLabels = {
   colorApply: 'Apply',
 };
 
-/** Default text-color swatches for the color menu. */
 export const DEFAULT_FONT_COLORS = [
   '#000000',
   '#374151',
@@ -62,7 +62,6 @@ export const DEFAULT_FONT_COLORS = [
   '#FFFFFF',
 ];
 
-/** Default highlight-color swatches for the highlight menu. */
 export const DEFAULT_HIGHLIGHT_COLORS = [
   '#FDE047', // yellow
   '#86EFAC', // green
@@ -75,7 +74,6 @@ export const DEFAULT_HIGHLIGHT_COLORS = [
   '#E5E7EB', // neutral
 ];
 
-/** Font sizes offered in the top-bar font-size menu. */
 export const DEFAULT_FONT_SIZE_OPTIONS = [12, 14, 16, 18, 20, 24, 28, 32];
 
 /** Heading choices in the top-bar heading menu (value 0 = paragraph). */

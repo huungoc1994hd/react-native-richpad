@@ -167,25 +167,26 @@ try {
 
 Creates the editor instance. Pass it to `RichEditorProvider`.
 
-| Option                                                  | Default      | Description                                                                                                                                                                  |
-| ------------------------------------------------------- | ------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `initialContent` (`string`)                             | `''`         | Initial HTML, read **once** on load. Pass a stable value.                                                                                                                    |
-| `editable` (`boolean`)                                  | `true`       | Set `false` for a read-only viewer. Toggling it at runtime is supported.                                                                                                     |
-| `autofocus` (`boolean`)                                 | `false`      | Focus the editor on load.                                                                                                                                                    |
-| `locale` (`LocaleOption`)                               | `'en'`       | Built-in code (`'en'`, `'vi'`) or a full custom bundle; an unknown code falls back to English. Drives every string below. See [Internationalization](#internationalization). |
-| `placeholder` (`string`)                                | locale's     | Empty-document placeholder. Overrides the locale's.                                                                                                                          |
-| `keyboardOffset` (`number`)                             | `60`         | Extra height reserved above the keyboard.                                                                                                                                    |
-| `debounceMs` (`number`)                                 | `300`        | Debounce for `onChange` (leading + trailing).                                                                                                                                |
-| `theme` (`RichThemePartial`)                            | `lightTheme` | See [Theming](#theming).                                                                                                                                                     |
-| `labels` (`Partial<RichEditorLabels>`)                  | locale's     | RN toolbar strings, merged over the locale's.                                                                                                                                |
-| `editorLabels` (`Partial<EditorLabels>`)                | locale's     | In-WebView strings (table menu, image caption), merged over the locale's.                                                                                                    |
-| `headingOptions` (`HeadingOption[]`)                    | locale's     | Entries of the top-bar heading menu (`value` 0 = paragraph).                                                                                                                 |
-| `metrics` (`EditorMetrics`)                             | see below    | Image/table minimum sizes.                                                                                                                                                   |
-| `onReady` (`(editor) => void`)                          | —            | Fires once when the editor is ready.                                                                                                                                         |
-| `onChange` (`(html: string) => void`)                   | —            | Debounced content changes.                                                                                                                                                   |
-| `onFocusChanged` (`(focused: boolean) => void`)         | —            | Editor focus/blur.                                                                                                                                                           |
-| `onStateChange` (`(state) => void`)                     | —            | Raw bridge state (advanced).                                                                                                                                                 |
-| `onImageInteractionChange` (`(active, inCell) => void`) | —            | An image was selected/deselected (e.g. to disable swipe-back).                                                                                                               |
+| Option                                                  | Default      | Description                                                                                                                                                                                                                 |
+| ------------------------------------------------------- | ------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `initialContent` (`string`)                             | `''`         | Initial HTML, read **once** on load. Pass a stable value.                                                                                                                                                                   |
+| `editable` (`boolean`)                                  | `true`       | Set `false` for a read-only viewer. Toggling it at runtime is supported.                                                                                                                                                    |
+| `autofocus` (`boolean`)                                 | `false`      | Focus the editor on load, caret at the start of the document.                                                                                                                                                               |
+| `locale` (`LocaleOption`)                               | `'en'`       | Built-in code (`'en'`, `'vi'`) or a full custom bundle; an unknown code falls back to English. Drives every string below. See [Internationalization](#internationalization).                                                |
+| `placeholder` (`string`)                                | locale's     | Empty-document placeholder. Overrides the locale's.                                                                                                                                                                         |
+| `keyboardOffset` (`number`)                             | `0`          | Extra height reserved above the keyboard, on top of the bottom toolbar's measured height.                                                                                                                                   |
+| `bottomInset` (`number`)                                | `0`          | Host chrome below the editor while the keyboard is closed — pass the safe-area bottom inset on an edge-to-edge app so content stays above the Android navigation bar / iOS home indicator. Fades out as the keyboard opens. |
+| `debounceMs` (`number`)                                 | `300`        | Debounce for `onChange` (leading + trailing).                                                                                                                                                                               |
+| `theme` (`RichThemePartial`)                            | `lightTheme` | See [Theming](#theming).                                                                                                                                                                                                    |
+| `labels` (`Partial<RichEditorLabels>`)                  | locale's     | RN toolbar strings, merged over the locale's.                                                                                                                                                                               |
+| `editorLabels` (`Partial<EditorLabels>`)                | locale's     | In-WebView strings (table menu, image caption), merged over the locale's.                                                                                                                                                   |
+| `headingOptions` (`HeadingOption[]`)                    | locale's     | Entries of the top-bar heading menu (`value` 0 = paragraph).                                                                                                                                                                |
+| `metrics` (`EditorMetrics`)                             | see below    | Image/table minimum sizes.                                                                                                                                                                                                  |
+| `onReady` (`(editor) => void`)                          | —            | Fires once when the editor is ready.                                                                                                                                                                                        |
+| `onChange` (`(html: string) => void`)                   | —            | Debounced content changes.                                                                                                                                                                                                  |
+| `onFocusChanged` (`(focused: boolean) => void`)         | —            | Editor focus/blur.                                                                                                                                                                                                          |
+| `onStateChange` (`(state) => void`)                     | —            | Raw bridge state (advanced).                                                                                                                                                                                                |
+| `onImageInteractionChange` (`(active, inCell) => void`) | —            | An image was selected/deselected (e.g. to disable swipe-back).                                                                                                                                                              |
 
 > `theme`, `labels`, `editorLabels`, `metrics`, `headingOptions` and a custom
 > `locale` object are compared by identity. Pass module-level constants or `useMemo`
@@ -194,7 +195,45 @@ Creates the editor instance. Pass it to `RichEditorProvider`.
 Returns a `RichEditorInstance` for `RichEditorProvider`. Fields worth reading
 yourself: `editor` (the tentap `EditorBridge`), `focusManager` (see
 [Dismissing the keyboard](#dismissing-the-keyboard-for-your-own-overlays)),
-`resolvedTheme` and `resolvedLabels`.
+`resolvedTheme` and `resolvedLabels`, plus the input-session fields below.
+
+#### Input-session state
+
+One question — _who owns the keyboard_ — answered in one place. The editor, an
+image caption and your own host controls all compete for it (selecting an image
+itself never moves it: the editor keeps its input session), so the instance
+exposes the current answer rather than leaving you to infer it from focus events.
+
+| Field                | Type         | Description                                                                                                                          |
+| -------------------- | ------------ | ------------------------------------------------------------------------------------------------------------------------------------ |
+| `captionFocused`     | `boolean`    | An image caption holds the keyboard. The built-in toolbars use this to disable their **formatting** group — a caption is plain text. |
+| `imageSessionActive` | `boolean`    | An image session is open (image selected, or its caption being typed).                                                               |
+| `leaveImageSession`  | `() => void` | End that session without refocusing the editor. See below.                                                                           |
+| `releaseHostInput`   | `() => void` | Your control has released the keyboard; ownership returns to the editor.                                                             |
+
+Use them when you mount a control of your own that needs the keyboard while an
+image may be selected — a search field, a link sheet:
+
+```tsx
+// opening your control:
+editor.leaveImageSession();
+
+// mount it only once the session has actually ended:
+useEffect(() => {
+  if (!editor.imageSessionActive && wantSearch) setSearchMounted(true);
+}, [editor.imageSessionActive, wantSearch]);
+
+// when your control closes or blurs:
+editor.releaseHostInput();
+```
+
+`leaveImageSession()` is asynchronous: the teardown is a chain of messages to the
+WebView. Mounting your control before `imageSessionActive` turns `false` races the
+caption's blur for native focus, and your field ends up needing a second tap.
+
+Call `releaseHostInput()` explicitly rather than relying on the editor regaining
+focus — leaving your control by a path that never reaches the editor (tapping
+straight onto an image) would otherwise strand ownership with it.
 
 ### `<RichEditorProvider>`
 
@@ -386,6 +425,26 @@ const handlePickImage = async (fromCamera: boolean) => {
 
 While the promise is pending the keyboard is kept down; once it resolves the
 image is inserted and the editor refocuses.
+
+### What an image looks like in the HTML
+
+Every image is a `<figure>` whose geometry lives in its inline style; the
+`<figcaption>` child exists only while a caption is shown, and its text mirrors
+into the img `alt`. Hiding a caption removes both — `alt` MEANS "the caption" to
+every consumer of the stored content, so a hidden caption serializes as no
+caption at all (toggling it back on within the same session restores the text
+from memory):
+
+```html
+<figure style="width:62%;margin-left:auto;margin-right:auto;">
+  <img src="https://…/a.png" alt="Caption" />
+  <figcaption>Caption</figcaption>
+</figure>
+```
+
+If you store the content in a format other than HTML, keep the figure's width and
+alignment: they live in its inline `style`, and Markdown's `![alt](url)` has nowhere
+to put them — an image silently returns to its natural size on the next round trip.
 
 ## Metrics
 

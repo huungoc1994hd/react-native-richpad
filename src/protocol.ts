@@ -1,11 +1,6 @@
 /**
- * Bridge protocol shared by the RN layer (`src/`) and the WebView bundle
- * (`webview/`, which imports it across the boundary as `../src/protocol`). Single
- * source of truth for message type strings, payload shapes and editor-state
- * shapes. The WebView switches assert exhaustiveness, so an RN→WebView message
- * declared here with no handler is a compile error; the webview→RN direction is
- * dispatched by `if` chains and carries no such guarantee. It lives under `src/`
- * so the contract ships with the package.
+ * Bridge protocol shared by `src/` and `webview/`. The WebView switches assert
+ * exhaustiveness, so an RN→WebView message with no handler fails to compile.
  */
 
 export const BridgeMessageType = {
@@ -27,6 +22,11 @@ export const BridgeMessageType = {
   SplitCell: 'split-cell',
   ForceBlur: 'force-blur',
   /**
+   * RN → webview (Android IME dance): return DOM focus to whichever host owns the
+   * session. editor.focus(null) is wrong — it would blur a fresh caption.
+   */
+  RestoreInputFocus: 'restore-input-focus',
+  /**
    * webview → RN: the DOM finished blurring after a ForceBlur. RN must wait for
    * this ack before resigning the native responder — see useEditorFocusManager.
    */
@@ -35,23 +35,28 @@ export const BridgeMessageType = {
   InsertParagraphBeforeTable: 'insert-paragraph-before-table',
   // MediaBridge
   InsertImage: 'insert-image',
+  /**
+   * RN → webview: end the image session WITHOUT focusing the editor, because a host
+   * control is about to take the keyboard.
+   */
+  LeaveImageSession: 'leave-image-session',
   /** webview → RN: image-toolkit selection state turned on/off. */
   ImageToolkitActive: 'image-toolkit-active',
   // ConfigBridge
   InitConfig: 'init-config',
   KeyboardWillShow: 'keyboard-will-show',
+  /** webview → RN: the editor exists. The only signal that is not content-dependent. */
+  EditorMounted: 'editor-mounted',
   // SearchBridge (in-document find)
   SearchSetQuery: 'search-set-query',
   SearchNext: 'search-next',
   SearchPrev: 'search-prev',
   SearchClear: 'search-clear',
-  // FormatBridge (clear formatting + links)
-  // NAMING RULE: messages are BROADCAST to every bridge, tentap's built-ins
-  // included. A raw string colliding with one of their action types ('set-link',
-  // 'set-image', 'toggle-bold', …) runs THEIR handler first with a wrong-shape
-  // payload; it may THROW and break the whole dispatch loop. Always prefix.
+  // FormatBridge. NAMING RULE: messages are BROADCAST to every bridge, tentap's
+  // included, so an unprefixed string can run THEIR handler. Always prefix.
   ClearFormatting: 'clear-formatting',
   SetLink: 'format-set-link',
+  SaveSelection: 'format-save-selection',
   Unlink: 'format-unlink',
   // 'select-all' collides with nothing today; prefixed anyway per the rule above.
   SelectAll: 'format-select-all',
@@ -66,10 +71,11 @@ export type TableInsertPayload = {
 };
 
 export type KeyboardWillShowPayload = {
-  /** Height of the area obscured by the keyboard (px, toolbar offset included). */
-  height: number;
-  /** Keyboard animation duration (ms). */
-  duration: number;
+  /**
+   * How much of the WebView's BOTTOM the host's chrome covers (px); 0 while the
+   * toolbar is parked off screen. The keyboard is NOT in it — quirk 21.
+   */
+  hostChromeOverlap: number;
 };
 
 /** UI labels rendered inside the WebView (table-action popover, image caption). */
@@ -84,7 +90,6 @@ export type EditorLabels = {
   addRow: string;
   addColumn: string;
   deleteTable: string;
-  /** Placeholder shown in an empty image figcaption. */
   imageCaptionPlaceholder: string;
 };
 
@@ -105,43 +110,35 @@ export const DEFAULT_EDITOR_LABELS: EditorLabels = {
 
 /** Dynamic theme — mapped onto CSS variables inside the WebView. */
 export type EditorTheme = {
-  /** Accent color (row/column/table/image selection). CSS var: --editor-accent */
+  /** Accent color (row/column/table/image selection). */
   accentColor?: string;
-  /** Editor font family. CSS var: --editor-font-family */
   fontFamily?: string;
-  /** Default font size (e.g. '16px') for text without a custom size. CSS var: --editor-font-size */
+  /** Default font size (e.g. '16px') for text without a custom size. */
   fontSize?: string;
-  /** Document background. CSS var: --editor-background-color */
   backgroundColor?: string;
-  /** Body text color. CSS var: --editor-text-color */
   textColor?: string;
-  /** Placeholder color. CSS var: --editor-placeholder-color */
   placeholderColor?: string;
-  /** Table cell border color. CSS var: --editor-table-border-color */
   tableBorderColor?: string;
-  /** Table header background. CSS var: --editor-table-header-bg */
   tableHeaderBackground?: string;
-  /** Image caption color. CSS var: --editor-caption-color */
   captionColor?: string;
-  /** Search match highlight. CSS var: --editor-search-highlight-bg */
+  /** Search match highlight. */
   searchHighlightColor?: string;
-  /** Active search match highlight. CSS var: --editor-search-active-bg */
+  /** Active search match highlight. */
   searchActiveHighlightColor?: string;
-  /** Background of the WebView overlay chrome (table popover, image toolbar). CSS var: --editor-surface */
+  /** Background of the WebView overlay chrome (table popover, image toolbar). */
   surfaceColor?: string;
-  /** Border of the overlay chrome and of the drag handles. CSS var: --editor-border */
+  /** Border of the overlay chrome and of the drag handles. */
   borderColor?: string;
-  /** Icon color inside the overlay chrome. CSS var: --editor-icon */
   iconColor?: string;
-  /** Secondary text/icon color inside the overlay chrome. CSS var: --editor-muted */
+  /** Secondary text/icon color inside the overlay chrome. */
   mutedColor?: string;
-  /** Divider between overlay toolbar groups. CSS var: --editor-divider */
+  /** Divider between overlay toolbar groups. */
   dividerColor?: string;
-  /** Destructive overlay action (delete table/image). CSS var: --editor-danger */
+  /** Destructive overlay action (delete table/image). */
   dangerColor?: string;
 };
 
-/** Runtime size limits pushed to the WebView (no rebuild needed after this). */
+/** Runtime size limits pushed to the WebView. */
 export type EditorMetrics = {
   /** Minimum width of a top-level image, as a % of the editor width. Default 15. */
   imageMinWidthPct?: number;
@@ -157,9 +154,7 @@ export type EditorConfig = {
   metrics?: EditorMetrics;
 };
 
-// ===== Per-bridge editor state =====
-// Each shape is the first generic argument of its BridgeExtension on BOTH sides,
-// and tentap's `BridgeState` augmentation is composed from all of them.
+// Each shape is the first generic argument of its BridgeExtension on BOTH sides.
 
 export type AlignBridgeState = {
   /** Alignment at the cursor; undefined until the WebView sends its first state. */
@@ -179,16 +174,15 @@ export type TableBridgeState = {
 
 export type SearchBridgeState = {
   searchMatches: number;
-  /** Index of the highlighted match within the match list. */
   searchActiveIndex: number;
 };
 
 export type FormatBridgeState = {
-  /** href of the link at the cursor, null when the cursor is outside a link. */
   activeLinkHref: string | null;
+  activeLinkText: string | null;
+  /** Plain text of the selection, capped at 200 chars. */
+  selectionText: string;
 };
-
-// ===== Per-bridge message unions =====
 
 export type AlignBridgeMessage = {
   type: typeof BridgeMessageType.SetAlign;
@@ -210,11 +204,18 @@ export type TableBridgeMessage =
   | { type: typeof BridgeMessageType.DeleteTable; payload: undefined }
   | { type: typeof BridgeMessageType.MergeCells; payload: undefined }
   | { type: typeof BridgeMessageType.SplitCell; payload: undefined }
-  | { type: typeof BridgeMessageType.ForceBlur; payload: undefined };
+  | { type: typeof BridgeMessageType.ForceBlur; payload: undefined }
+  | { type: typeof BridgeMessageType.RestoreInputFocus; payload: undefined };
 
 /** webview → RN: confirms the DOM blur is complete (see the BlurAck note). */
 export type BlurAckMessage = {
   type: typeof BridgeMessageType.BlurAck;
+  payload: undefined;
+};
+
+/** webview → RN: sent once per page load, before any transaction can happen. */
+export type EditorMountedMessage = {
+  type: typeof BridgeMessageType.EditorMounted;
   payload: undefined;
 };
 
@@ -230,37 +231,33 @@ export type SearchBridgeMessage =
   | { type: typeof BridgeMessageType.SearchClear; payload: undefined };
 
 /**
- * Clear formatting (back to plain text) + set/remove links. SetLink links the
- * selected range (expanding along the mark when the cursor sits inside a link);
- * with no selection it inserts the URL as linked text.
+ * Clear formatting + set/remove links. SetLink expands along the mark when the
+ * cursor sits inside a link, and inserts the URL as text when nothing is selected.
  */
 export type FormatBridgeMessage =
   | { type: typeof BridgeMessageType.ClearFormatting; payload: undefined }
-  | { type: typeof BridgeMessageType.SetLink; payload: { href: string } }
+  | { type: typeof BridgeMessageType.SetLink; payload: { href: string; text?: string } }
+  | { type: typeof BridgeMessageType.SaveSelection; payload: undefined }
   | { type: typeof BridgeMessageType.Unlink; payload: undefined }
   | { type: typeof BridgeMessageType.SelectAll; payload: undefined };
 
 /**
- * Insert at the cursor position SAVED when the overlay opened (ForceBlur), not at
- * the current selection — the blur/resignFirstResponder sequence may have reset it
- * while the system picker was open.
+ * Insert at the cursor position SAVED when the overlay opened (ForceBlur): the
+ * blur sequence may have reset the live selection while the picker was open.
  */
-export type MediaBridgeMessage = {
-  type: typeof BridgeMessageType.InsertImage;
-  payload: { src: string };
-};
+export type MediaBridgeMessage =
+  | { type: typeof BridgeMessageType.InsertImage; payload: { src: string } }
+  | { type: typeof BridgeMessageType.LeaveImageSession; payload: undefined };
 
 /**
- * webview → RN (MediaBridge.onEditorMessage): an image was selected/deselected.
- * RN suspends the focus manager and dismisses the keyboard natively — a web-side
- * blur alone is not enough, WKWebView restores the first responder on its own and
- * the keyboard flickers back.
+ * webview → RN: an image was selected/deselected. It does not move the keyboard;
+ * RN records ownership for imageSessionActive and the consumer callback.
  */
 export type ImageToolkitActiveMessage = {
   type: typeof BridgeMessageType.ImageToolkitActive;
   /**
-   * inCell: image inside a table cell — RN does NOT hide the keyboard (in-table
-   * images are small; the user keeps typing). Only top-level images suspend.
+   * inCell: image inside a table cell. captionFocused: a caption holds the keyboard,
+   * so RN raises the Android IME for it; optional for older bundles (absent = false).
    */
-  payload: { active: boolean; inCell: boolean };
+  payload: { active: boolean; inCell: boolean; captionFocused?: boolean };
 };

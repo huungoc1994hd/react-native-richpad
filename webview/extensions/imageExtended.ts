@@ -8,7 +8,7 @@ export const isImageAlign = (value: unknown): value is ImageAlign =>
   value === 'left' || value === 'center' || value === 'right';
 
 /** Build the alignment part of the style using margins (no float — safe for mobile layout). */
-const alignStyle = (align?: ImageAlign | null): string => {
+export const alignStyle = (align?: ImageAlign | null): string => {
   if (align === 'center') return 'margin-left:auto;margin-right:auto;';
   if (align === 'right') return 'margin-left:auto;';
   if (align === 'left') return 'margin-right:auto;';
@@ -36,9 +36,8 @@ const parseStyleWidth = (element: HTMLElement, unit: '%' | 'px'): number | null 
 };
 
 /**
- * Width/align attribute spec shared by the `figure` node and the `image` node.
- * `pctAttrName` is the attr the % width lives in: 'width' on a figure, 'pctWidth'
- * on a bare image (see the ImageAttrs note below for why they differ).
+ * Width/align attribute spec shared by the `figure` and `image` nodes. `pctAttrName`
+ * is where the % width lives: 'width' on a figure, 'pctWidth' on a bare image.
  */
 export const imageGeometryAttributes = (pctAttrName: 'width' | 'pctWidth'): Attributes => ({
   [pctAttrName]: {
@@ -61,19 +60,8 @@ export const imageGeometryAttributes = (pctAttrName: 'width' | 'pctWidth'): Attr
 });
 
 /**
- * Adds global attrs pctWidth/pxWidth/align to TenTapStartKit's EXISTING `image`
- * node (extends, never replaces — a replacement collides on schema name), each
- * serialized as inline style so the web view (rehypeRaw) renders it as-is.
- *
- * Exactly one width semantic is ever set: pctWidth for top-level images (% of the
- * editor width, responsive), pxWidth inside TABLE CELLS where a % would be a % of
- * a container the user can drag — max-width:100% caps the display when the column
- * narrows while the attr survives, so widening the column restores the size.
- *
- * Do NOT name these `width`/`height`: @tiptap/extension-image ships those attrs
- * and renders them as bare HTML attributes (width="15" = 15 PIXELS), so the img
- * would carry both style width:15% and width="15" and collapse to 15px whenever
- * PM reuses the element and drops the style.
+ * Adds pctWidth/pxWidth/align to TenTapStartKit's EXISTING image node, as inline style.
+ * Never named width/height: tiptap renders those as bare HTML attributes.
  */
 export const ImageAttrs = Extension.create({
   name: 'imageAttrs',

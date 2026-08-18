@@ -8,7 +8,6 @@ import { DEFAULT_PORTAL_HOST } from './ui/popover/PopoverMenu';
 import type { RichEditorInstance } from './hooks/useRichEditor';
 
 export interface RichEditorProviderProps {
-  /** The instance returned by useRichEditor. */
   editor: RichEditorInstance;
   /** Override how toolbar icons are rendered (defaults to MaterialIcons). */
   renderIcon?: RenderIcon;

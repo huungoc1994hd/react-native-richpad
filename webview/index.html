@@ -9,11 +9,8 @@
     <title>WebView Editor — Dev Harness</title>
   </head>
   <body>
-    <!--
-      Dev harness: run `npm run dev` and open the browser to debug the editor
-      directly, without building or running the RN app.
-      Note: bridge messages from RN are absent — pure UI/tiptap testing only.
-    -->
+    <!-- Dev harness (`npm run dev`): the editor in a browser, without RN. No
+         bridge messages arrive, so it is UI/tiptap testing only. -->
     <div id="root"></div>
     <script type="module" src="/main.tsx"></script>
   </body>

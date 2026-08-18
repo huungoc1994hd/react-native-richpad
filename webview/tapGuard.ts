@@ -1,12 +1,6 @@
 /**
- * Mobile WebKit/Chromium synthesize a ghost mousedown → mouseup → click ~300ms
- * after touchend, even when the touch called preventDefault — React registers its
- * root touchstart listener as PASSIVE, so preventDefault in onTouchStart is a
- * no-op. Untreated, overlay controls double-fire or the ghost lands on the editor
- * and steals the selection.
- *
- * Shared by ALL overlay components so a touch on one suppresses the ghost aimed
- * at another, which may arrive at stale coordinates after the control moved.
+ * Mobile engines synthesize a ghost mousedown/click after touchend, and React's passive
+ * root listener means onTouchStart cannot cancel it (quirk 3). Shared by ALL overlays.
  */
 
 import type * as React from 'react';
@@ -14,12 +8,12 @@ import type * as React from 'react';
 let lastTouchTapTs = 0;
 
 /** Record that a real touch tap just happened (call from onTouchStart). */
-export const markTouchTap = () => {
+const markTouchTap = () => {
   lastTouchTapTs = Date.now();
 };
 
 /** True while a mouse event is likely the ghost of a recent touch. */
-export const isRecentTouchTap = (windowMs = 700): boolean => Date.now() - lastTouchTapTs < windowMs;
+const isRecentTouchTap = (windowMs = 700): boolean => Date.now() - lastTouchTapTs < windowMs;
 
 /** Swallow the synthesized mouse burst at window capture for `durationMs`. */
 export const swallowGhostMouseEvents = (durationMs = 400) => {
@@ -43,9 +37,8 @@ type TapHandlerProps = {
 };
 
 /**
- * Ghost-safe tap props for an overlay control: the touch arms the guard, the
- * ghost mousedown that follows is dropped. Set `stopPropagation` on controls
- * whose trailing touchend/mouseup/click must not reach the editor underneath.
+ * Ghost-safe tap props for an overlay control. Set `stopPropagation` when the trailing
+ * touchend/click must not reach the editor underneath.
  */
 export const tapHandlers = (
   handler: (e: React.TouchEvent | React.MouseEvent) => void,
