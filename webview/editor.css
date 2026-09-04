@@ -177,20 +177,28 @@ ul[data-type='taskList'] li > div {
   display: block; /* so margin:auto centering / alignment works */
   height: auto;
   max-width: 100%;
+  /* No alignment set = centred, matching how the same content renders elsewhere. */
+  margin-left: auto;
+  margin-right: auto;
   /* PM sets draggable=true on the selected node, and WebKit's drag session then
      swallows every touchmove, freezing the resize preview. */
   -webkit-user-drag: none;
 }
 .ProseMirror figure {
   -webkit-user-drag: none;
-  margin: 12px 0;
+  margin: 12px auto;
   max-width: 100%;
 }
-/* In a table cell the figure sits flush: cells are cramped, and this matches
+/* In a table cell an image sits flush: cells are cramped, and this matches
    the layout in-cell images always had. */
 .ProseMirror td figure,
 .ProseMirror th figure {
   margin: 0;
+}
+.ProseMirror td img,
+.ProseMirror th img {
+  margin-left: 0;
+  margin-right: 0;
 }
 /* An image under a NodeSelection must not carry selection paint; iOS ignores PM's
    stock rule (quirk 12). Chromium must keep it selectable or the IME closes. */

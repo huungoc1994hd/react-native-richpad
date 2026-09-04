@@ -58,14 +58,13 @@ export const ImageToolbar = ({
       whiteSpace: 'nowrap',
     }}
   >
-    {/* By default (align=null) the image sits left → the left icon shows as active */}
-    <ToolbarIconButton
-      active={align === 'left' || align === null}
-      onTap={actions.handleAlign('left')}
-    >
+    <ToolbarIconButton active={align === 'left'} onTap={actions.handleAlign('left')}>
       <AlignLeftIcon />
     </ToolbarIconButton>
-    <ToolbarIconButton active={align === 'center'} onTap={actions.handleAlign('center')}>
+    <ToolbarIconButton
+      active={align === 'center' || align === null}
+      onTap={actions.handleAlign('center')}
+    >
       <AlignCenterIcon />
     </ToolbarIconButton>
     <ToolbarIconButton active={align === 'right'} onTap={actions.handleAlign('right')}>
