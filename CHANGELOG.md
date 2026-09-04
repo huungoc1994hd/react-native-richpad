@@ -4,6 +4,18 @@ Notable changes per release. Entries reference "Platform quirks", a section of
 [CONTRIBUTING.md](https://github.com/huungoc1994hd/react-native-richpad/blob/main/CONTRIBUTING.md)
 in the repository — it is not part of the published package.
 
+## 1.0.7
+
+### Changed
+
+- **An image with no alignment is now CENTRED.** It sat left before, out of step with
+  how the same content renders outside the editor. An alignment set on the image is
+  unchanged, and an image inside a table cell still sits flush.
+- **The image toolbar marks the CENTRE icon as active** for an image carrying no
+  alignment of its own. It marked the left icon before.
+- Alignment is written as both margins of the image's inline style rather than one.
+  Content saved by earlier versions still reads back with the same alignment.
+
 ## 1.0.6
 
 ### Changed

@@ -72,12 +72,14 @@ keyboard never closes. Tap an image mid-word (composition open) → focus still 
 Delete a caption's last character → the caret stays visible, the field stays one line.
 
 **Image gestures.** Drag a resize handle → smooth for the whole gesture, caption keeps
-focus (quirk 6). Change alignment → save → reopen: width AND alignment survive. Tap a
-bare image while typing → the keyboard STAYS up; with it closed → it stays closed.
-Toggle a caption off while typing in it → keyboard stays, image stays selected. Toggle
-on/off → the image never blinks or reloads. Scroll with a finger while an image is
-selected → the overlay fades and returns in place. Open a note saved with bare `<img>`
-→ images render, resize and caption normally.
+focus (quirk 6). Change alignment → save → reopen: width AND alignment survive. Insert
+an image and leave its alignment alone → it sits CENTRED, before and after a save. Set
+it left or right → it moves there and stays put across a reopen. An image inside a table
+cell sits flush whatever the document does. Tap a bare image while typing → the keyboard
+STAYS up; with it closed → it stays closed. Toggle a caption off while typing in it →
+keyboard stays, image stays selected. Toggle on/off → the image never blinks or reloads.
+Scroll with a finger while an image is selected → the overlay fades and returns in
+place. Open a note saved with bare `<img>` → images render, resize and caption normally.
 
 **Tables.** Add a row / add a column from the table menu → the caret lands in the
 first cell of what was just created AND that cell is brought into view, scrolling the

@@ -7,11 +7,14 @@ export type ImageAlign = 'left' | 'center' | 'right';
 export const isImageAlign = (value: unknown): value is ImageAlign =>
   value === 'left' || value === 'center' || value === 'right';
 
-/** Build the alignment part of the style using margins (no float — safe for mobile layout). */
+/**
+ * Alignment as margins (no float — safe for mobile layout). BOTH margins are always
+ * written: unaligned images centre by default, so a one-sided `auto` would read as centred.
+ */
 export const alignStyle = (align?: ImageAlign | null): string => {
   if (align === 'center') return 'margin-left:auto;margin-right:auto;';
-  if (align === 'right') return 'margin-left:auto;';
-  if (align === 'left') return 'margin-right:auto;';
+  if (align === 'right') return 'margin-left:auto;margin-right:0;';
+  if (align === 'left') return 'margin-left:0;margin-right:auto;';
   return '';
 };
 
