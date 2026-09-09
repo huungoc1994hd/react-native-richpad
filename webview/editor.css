@@ -49,7 +49,7 @@ body {
 }
 
 /* The scroll container ends where the editing area really ends. min() of two
-   independent limits, never a sum — see syncVisibleHeight and quirk 21. */
+   independent limits, never a sum — see syncVisibleHeight. */
 #root > div:nth-of-type(1) {
   position: absolute;
   overflow-x: hidden;
@@ -59,7 +59,7 @@ body {
   height: min(calc(100% - var(--editor-chrome, 0px)), var(--editor-visible-strip, 100%));
   background-color: var(--editor-background-color);
   /* Overscrolling must not chain to the page: the leftover strip below this
-     container is pannable, and Chromium moves the visual viewport onto it (quirk 22). */
+     container is pannable, and Chromium moves the visual viewport onto it. */
   overscroll-behavior: contain;
 }
 #root div .ProseMirror {
@@ -80,7 +80,7 @@ body {
 }
 
 /* Selected text keeps its colour: Chromium paints the platform pair Highlight /
-   HighlightText, and on Android HighlightText is opaque black (quirk 17). The :not()
+   HighlightText, and on Android HighlightText is opaque black. The :not()
    keeps this disjoint from PM's hideselection rule, which must still win. */
 html.android .ProseMirror:not(.ProseMirror-hideselection) ::selection {
   background-color: Highlight;
@@ -201,12 +201,12 @@ ul[data-type='taskList'] li > div {
   margin-right: 0;
 }
 /* An image under a NodeSelection must not carry selection paint; iOS ignores PM's
-   stock rule (quirk 12). Chromium must keep it selectable or the IME closes. */
+   stock rule. Chromium must keep it selectable or the IME closes. */
 html.ios .ProseMirror.ProseMirror-hideselection img {
   -webkit-user-select: none;
   user-select: none;
 }
-/* Both halves of quirk 12: hide the root's own image-height caret, which PM's
+/* Second half of the rule above: hide the root's own image-height caret, which PM's
    descendant rule cannot reach, then win caret-color back for the caption. */
 .ProseMirror.ProseMirror-hideselection {
   caret-color: transparent;

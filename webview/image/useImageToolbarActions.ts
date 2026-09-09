@@ -34,11 +34,6 @@ export const useImageToolbarActions = (
     if (a) fn(a);
   };
 
-  /** Restore editable before actions that end in typing (view.focus()). */
-  const ensureEditable = () => {
-    if (!editor.isEditable) editor.setEditable(true, false);
-  };
-
   const handleAlign = (align: ImageAlign) =>
     withActive(a => {
       updateImageAttrs(editor, a.targetPos, { align: a.align === align ? null : align });
@@ -52,23 +47,19 @@ export const useImageToolbarActions = (
     if (a.hasCaption) {
       hideCaption(editor, a.targetPos);
     } else {
-      ensureEditable();
       showCaption(editor, a.imagePos);
     }
   });
 
   const handleDelete = withActive(a => {
-    ensureEditable();
     deleteImageNode(editor, a.targetPos);
   });
 
   const handleInsertAbove = withActive(a => {
-    ensureEditable();
     insertParagraphAbove(editor, a.targetPos);
   });
 
   const handleInsertBelow = withActive(a => {
-    ensureEditable();
     insertParagraphBelow(editor, a.targetPos);
   });
 

@@ -49,7 +49,7 @@ const deleteTrapParagraph = (editor: Editor): boolean => {
 
 /**
  * Backspace removes an orphan empty line at a join barrier, through all three doors:
- * the keymap, `beforeinput`, and Android's DEAD PRESS with no input event (quirk 15).
+ * the keymap, `beforeinput`, and Android's DEAD PRESS with no input event.
  */
 export const LeadingEmptyParagraphBackspace = Extension.create({
   name: 'leadingEmptyParagraphBackspace',
@@ -75,7 +75,7 @@ export const LeadingEmptyParagraphBackspace = Extension.create({
           handleDOMEvents: {
             keydown: (view, event) => {
               // A REAL Backspace, answered here rather than in the keymap: PM swallows
-              // it near a composition on WebKit (quirk 18).
+              // for 500ms after a composition ends on WebKit.
               if (event.keyCode === BACKSPACE_KEYCODE || event.key === 'Backspace') {
                 pressStartedIn = null;
                 if (!deleteTrapParagraph(editor)) return false;

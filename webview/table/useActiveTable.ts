@@ -14,8 +14,10 @@ export const useActiveTable = (editor: Editor, session: TableSession): (() => vo
   // below; a plain function would re-subscribe on every render.
   const updateHandles = useCallback(() => {
     // While the popover is open the cell stays put: the tap that opened it moved
-    // the selection out.
-    const active = (popoverRef.current ? activeCellRef.current : null) ?? resolveActiveCell(editor);
+    // the selection out. A read-only document keeps its caret but shows no handles.
+    const active = editor.isEditable
+      ? ((popoverRef.current ? activeCellRef.current : null) ?? resolveActiveCell(editor))
+      : null;
 
     if (!active) {
       setActiveCell(null);

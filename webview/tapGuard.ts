@@ -1,6 +1,6 @@
 /**
  * Mobile engines synthesize a ghost mousedown/click after touchend, and React's passive
- * root listener means onTouchStart cannot cancel it (quirk 3). Shared by ALL overlays.
+ * root listener means onTouchStart cannot cancel it. Shared by ALL overlays.
  */
 
 import type * as React from 'react';

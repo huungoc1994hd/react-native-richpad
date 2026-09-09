@@ -1,6 +1,6 @@
 import React from 'react';
 // Every control taps through tapHandlers: a ghost click steals the NodeSelection and
-// makes each button double-fire (quirk 3).
+// makes each button double-fire.
 import { tapHandlers } from '../tapGuard';
 import {
   AlignCenterIcon,

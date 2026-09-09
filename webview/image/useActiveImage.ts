@@ -29,11 +29,16 @@ export const useActiveImage = (editor: Editor, session: ImageSession): ActiveIma
     (props?: { transaction?: { getMeta: (key: string) => unknown } }) => {
       // Mid-drag: handleMove already keeps the position in sync with the DOM — skip
       if (dragRef.current?.active) return;
+      // A read-only document shows no toolkit, whatever the selection holds
+      if (!editor.isEditable) {
+        setActive(null);
+        return;
+      }
 
       const { state, view } = editor;
       const selection = state.selection;
-      // Duck-type via .node, never `instanceof NodeSelection`: tentap's prebuilt web
-      // bundle inlines its own prosemirror-state, so the classes differ (quirk 9).
+      // Duck-type via .node, not `instanceof NodeSelection`: class identity breaks the
+      // moment a second ProseMirror copy enters the bundle.
       const selectedNode = (selection as Partial<NodeSelection>).node;
       if (!selectedNode || selectedNode.type.name !== 'image') {
         // INVARIANT: while a caption is focused the image stays active. EXCEPTION: a

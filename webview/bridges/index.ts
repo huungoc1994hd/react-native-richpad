@@ -10,7 +10,7 @@ import { TableBridge } from './table';
 
 /**
  * Every bridge the WebView registers, in dispatch order. tiptap's duplicate-name
- * warning is expected — do NOT filter the spare registrations (quirk 19).
+ * warning is expected — do NOT filter the spare registrations.
  */
 export const richpadBridges = [
   // The stock HistoryBridge is REPLACED by the caption-aware one.

@@ -267,7 +267,7 @@ export const RichEditorBottomBar = ({
               placement="top"
               contentWidth={300}
               // refocusNow MUST run BEFORE this popover unmounts, or RN hides the
-              // keyboard along with the field (quirk 10).
+              // keyboard along with the field.
               onClose={() => focusManager.refocusNow()}
               trigger={(triggerProps, isOpen) => (
                 <ToolbarButton

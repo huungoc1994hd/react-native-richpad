@@ -6,8 +6,8 @@ export default defineConfig({
   plugins: [react()],
   resolve: {
     alias: {
-      // Build tentap's web editor FROM SOURCE: its prebuilt bundle inlines an old
-      // prosemirror-view that redraws mid-composition and duplicates text (quirk 9).
+      // Build tentap's web editor FROM SOURCE: its prebuilt bundle inlines its own
+      // ProseMirror, out of reach of the patch in patches/ and of the dedupe below.
       '@10play/tentap-editor/web': resolve(
         __dirname,
         'node_modules/@10play/tentap-editor/src/webEditorUtils/index.ts',

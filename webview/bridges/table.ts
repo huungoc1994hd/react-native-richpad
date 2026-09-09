@@ -113,7 +113,7 @@ export const TableBridge = new BridgeExtension<
       }
       case BridgeMessageType.RestoreInputFocus: {
         // Second half of the Android IME dance: return DOM focus to whichever editing
-        // host owns the session (quirk 10).
+        // host owns the session.
         const captionField = getCaptionOwner();
         if (captionField) {
           // Only a PENDING session is completed here: a focused field would lose its

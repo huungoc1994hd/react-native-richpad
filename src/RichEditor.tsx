@@ -104,8 +104,8 @@ export const RichEditor = forwardRef<RichEditorRef, RichEditorProps>(({ style },
     };
   }, [chromeReserve, keyboardOffset, bottomInset]);
 
-  // Android IME opener (quirk 10). It must stay MOUNTED for the editor's lifetime:
-  // unmounting a focused TextInput makes RN hide the keyboard it just opened.
+  // Android raises the IME only for a native input taking focus. The opener must stay
+  // MOUNTED for the editor's lifetime: unmounting it focused makes RN hide the keyboard.
   const imeOpenerRef = useRef<TextInput>(null);
   useEffect(() => {
     if (!IS_ANDROID) return undefined;

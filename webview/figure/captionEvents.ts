@@ -26,12 +26,14 @@ export const attachCaptionEvents = (ctx: CaptionContext): CompositionFlag => {
   dom.addEventListener('input', () => {
     ensureCaretLine(dom);
     // Deleting the last character drops the text node WebKit anchors the caret on,
-    // and an empty-to-empty transaction produces no update to re-anchor on (quirk 1).
+    // and an empty-to-empty transaction produces no update to re-anchor on.
     if (document.activeElement === dom && !isCaretAttachedIn(dom)) placeCaretAtEnd(dom);
     syncToDoc(ctx);
   });
 
   dom.addEventListener('pointerdown', event => {
+    // Read-only document: no session to open, and the image must not activate either
+    if (!editor.isEditable) return;
     announceCaptionFocus(dom);
     const pos = resolvePos();
     if (typeof pos !== 'number') return;
@@ -44,7 +46,7 @@ export const attachCaptionEvents = (ctx: CaptionContext): CompositionFlag => {
       selectedNode?.type.name === 'image' && state.selection.from === imagePos;
 
     // Image not active yet: own the whole transition inside the gesture, blurring the
-    // source BEFORE the dispatch so PM cannot paint over the caret (quirk 2).
+    // source BEFORE the dispatch so PM cannot paint over the caret.
     if (!alreadySelected) {
       event.preventDefault();
       releaseDomFocus(dom);
@@ -55,10 +57,10 @@ export const attachCaptionEvents = (ctx: CaptionContext): CompositionFlag => {
     if (document.activeElement === dom) return;
 
     // Opening a NEW session: the default focus brings UIKit's reveal, which moves the
-    // view on its own and ignores preventScroll (quirk 4). Own this entry point too.
+    // view on its own and ignores preventScroll. Own this entry point too.
     event.preventDefault();
     // Suspended session: defer through the restore-input-focus handshake, which
-    // carries no coordinates — the caret goes to the end (quirk 10).
+    // carries no coordinates — the caret goes to the end.
     const pmHost = dom.closest('.ProseMirror');
     const locked = pmHost instanceof HTMLElement && pmHost.contentEditable === 'false';
     if (locked && !isInputSessionLive()) return;
@@ -83,7 +85,7 @@ export const attachCaptionEvents = (ctx: CaptionContext): CompositionFlag => {
 
   dom.addEventListener('blur', event => {
     // Android with relatedTarget=null: the WebView lost native focus to the IME dance,
-    // not the user. The session survives it (quirk 10).
+    // not the user. The session survives it.
     if (IS_ANDROID && event.relatedTarget === null) return;
     // Withdraw the announce only while still the owner: caption A → B announces B
     // first, and A's blur must not clobber it.

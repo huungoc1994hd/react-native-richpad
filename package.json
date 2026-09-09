@@ -1,6 +1,6 @@
 {
   "name": "react-native-richpad",
-  "version": "1.0.7",
+  "version": "1.0.8",
   "description": "A WebView-based rich-text editor for React Native (iOS + Android) with tables, images, search, and a fully themeable toolbar.",
   "source": "./src/index.ts",
   "main": "./src/index.ts",

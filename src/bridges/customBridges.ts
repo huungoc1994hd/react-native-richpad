@@ -105,7 +105,7 @@ export const FontSizeBridge = new BridgeExtension<
   FontSizeBridgeMessage
 >({
   // MUST be 'textStyle': tentap IGNORES forceName when a bridge has a tiptapExtension,
-  // and a name the WebView cannot look up drops the bridge silently (quirk 19).
+  // and a name the WebView cannot look up drops the bridge silently.
   forceName: 'textStyle',
   extendEditorInstance: sendBridgeMessage => {
     return {
