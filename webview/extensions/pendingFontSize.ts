@@ -1,7 +1,7 @@
 import { Extension } from '@tiptap/core';
 import { Plugin, PluginKey } from '@tiptap/pm/state';
-// Decoration from the TENTAP bundle, never '@tiptap/pm/view': a DecorationSet from the
-// other prosemirror copy crashes the view it is handed to (quirk 9).
+// Decoration from tentap's export, the copy the view runs: a DecorationSet built from
+// another ProseMirror copy crashes the view it is handed to.
 import { Decoration, DecorationSet } from '@10play/tentap-editor/web';
 
 /**

@@ -14,7 +14,8 @@ import type { CaptionContext } from './captionSync';
 
 /**
  * The caption is its OWN EDITING HOST: <figcaption contenteditable> in a cE=false
- * figure, so deletion cannot reach the <img> and PM never sees the typing.
+ * figure, so deletion cannot reach the <img> and PM never sees the typing. The host's
+ * read-only flag stops at the PM root, so the field mirrors editor.isEditable itself.
  */
 export const Figcaption = Node.create({
   name: 'figcaption',
@@ -29,7 +30,12 @@ export const Figcaption = Node.create({
     setCaptionEditorView(editor.view);
     return ({ node, getPos }) => {
       const dom = document.createElement('figcaption');
-      dom.contentEditable = 'true';
+      const syncEditable = () => {
+        dom.contentEditable = editor.isEditable ? 'true' : 'false';
+      };
+      syncEditable();
+      // setEditable emits 'update' without a doc change, which never reaches update()
+      editor.on('update', syncEditable);
       dom.setAttribute('data-placeholder', getEditorLabels().imageCaptionPlaceholder);
       dom.textContent = node.textContent;
       ensureCaretLine(dom);
@@ -89,6 +95,7 @@ export const Figcaption = Node.create({
         stopEvent: () => true,
         ignoreMutation: () => true,
         destroy() {
+          editor.off('update', syncEditable);
           // Removal fires no blur (undo deleting the figure), so close the session
           // here or RN stays at captionFocused with a dimmed toolbar.
           if (getCaptionOwner() === dom) announceCaptionFocus(null);

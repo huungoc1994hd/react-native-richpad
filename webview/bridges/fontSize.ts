@@ -60,7 +60,7 @@ export const FontSizeBridge = new BridgeExtension<
   FontSizeBridgeMessage
 >({
   // MUST stay TextStyle: it names the bridge, and RN keys this one 'textStyle'
-  // (quirk 19). Never TextStyleKit — its FontSize takes over the attribute below.
+  // by that name. Never TextStyleKit — its FontSize takes over the attribute below.
   tiptapExtension: TextStyle,
   tiptapExtensionDeps: [FontSizeAttribute],
   onBridgeMessage: (editor, message) => {

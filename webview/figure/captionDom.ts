@@ -1,6 +1,6 @@
 /**
  * The caption field's DOM invariants. No editor, no ProseMirror — only the shape
- * WebKit needs to paint a caret in an editable island (quirks 1 and 12).
+ * WebKit needs to paint a caret in an editable island.
  */
 
 /**

@@ -89,7 +89,7 @@ export const Figure = Node.create({
         },
         /**
          * Attribute writes on THIS element are ours; a redraw would kill the caption
-         * (quirk 6). Children still reach PM — it doubles as the contentDOM.
+         * NodeView. Children still reach PM — it doubles as the contentDOM.
          */
         ignoreMutation: (mutation: ViewMutationRecord) =>
           mutation.type === 'attributes' && mutation.target === dom,

@@ -3,7 +3,7 @@ import type { EditorState, Selection } from '@tiptap/pm/state';
 
 /**
  * Build selections with the class of the ProseMirror instance ACTUALLY RUNNING: a
- * foreign one fails prosemirror-view's instanceof checks and strands Backspace (quirk 9).
+ * foreign one fails prosemirror-view's instanceof checks and strands Backspace.
  */
 const getSelectionBase = (state: EditorState) =>
   Object.getPrototypeOf(state.selection.constructor) as {

@@ -73,7 +73,7 @@ export type TableInsertPayload = {
 export type KeyboardWillShowPayload = {
   /**
    * How much of the WebView's BOTTOM the host's chrome covers (px); 0 while the
-   * toolbar is parked off screen. The keyboard is NOT in it — quirk 21.
+   * toolbar is parked off screen. The keyboard is NOT in it; the page measures that itself.
    */
   hostChromeOverlap: number;
 };

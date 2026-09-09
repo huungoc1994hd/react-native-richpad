@@ -204,14 +204,8 @@ export function updateImageAttrs(
  */
 export const LEAVE_IMAGE_META = 'richpadLeaveImage';
 
-/**
- * Focus the editor after an action that leaves image mode. The editable guard only
- * matters for a read-only host, where focus() would be a silent no-op.
- */
+/** Focus the editor after an action that leaves image mode, keyboard open to keep typing. */
 function focusEditorForTyping(editor: Editor): void {
-  if (!editor.isEditable) {
-    editor.setEditable(true, false);
-  }
   editor.view.focus();
 }
 

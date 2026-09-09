@@ -1,0 +1,54 @@
+diff --git a/node_modules/prosemirror-view/dist/index.js b/node_modules/prosemirror-view/dist/index.js
+index 012237d..ddd9547 100644
+--- a/node_modules/prosemirror-view/dist/index.js
++++ b/node_modules/prosemirror-view/dist/index.js
+@@ -1821,7 +1821,10 @@ class ViewTreeUpdater {
+                 scanTo = Math.min(this.index + 3, scanTo);
+             for (let i = this.index; i < scanTo; i++) {
+                 let next = this.top.children[i];
+-                if (next.matchesMark(marks[depth]) && !this.isLocked(next.dom)) {
++                // A mark desc around the composition node stays reusable: updateNextNode
++                // still locks the nodes inside it, while re-creating the mark element
++                // would drop the browser's composition state on those nodes.
++                if (next.matchesMark(marks[depth])) {
+                     found = i;
+                     break;
+                 }
+@@ -3569,7 +3572,9 @@ editHandlers.compositionstart = editHandlers.compositionupdate = view => {
+     if (!view.composing) {
+         view.domObserver.flush();
+         let { state } = view, $pos = state.selection.$to;
+-        if (state.selection instanceof TextSelection &&
++        // Only for a caret: a composition replacing a selection needs the browser's
++        // selection left alone, or the IME loses the range it is replacing.
++        if (state.selection instanceof TextSelection && state.selection.empty &&
+             (state.storedMarks ||
+                 (!$pos.textOffset && $pos.parentOffset && $pos.nodeBefore.marks.some(m => m.type.spec.inclusive === false)) ||
+                 chrome && windows && selectionBeforeUneditable(view))) { // Issue #1500
+@@ -5104,6 +5109,16 @@ const ruleFromNode = (added) => (dom) => {
+     return null;
+ };
+ const isInline = /^(a|abbr|acronym|b|bd[io]|big|br|button|cite|code|data(list)?|del|dfn|em|i|img|ins|kbd|label|map|mark|meter|output|q|ruby|s|samp|small|span|strong|su[bp]|time|u|tt|var)$/i;
++// Composed text that Chromium put in a different mark context than the caret's
++// (typed after a link, which Chromium never extends) has to keep the DOM's marks:
++// rendering it into the caret's marks replaces the nodes the IME is composing in.
++function composedOutsideMarks(view, domMarks, from, to) {
++    if (!(chrome && view.composing))
++        return false;
++    let $from = view.state.doc.resolve(from);
++    let expected = from == to ? $from.marks() : $from.marksAcross(view.state.doc.resolve(to)) || [];
++    return !Mark.sameSet(domMarks, expected);
++}
+ function readDOMChange(view, from, to, typeOver, addedNodes) {
+     let compositionID = view.input.compositionPendingChanges || (view.composing ? view.input.compositionID : 0);
+     view.input.compositionPendingChanges = 0;
+@@ -5287,7 +5302,8 @@ function readDOMChange(view, from, to, typeOver, addedNodes) {
+                 tr.removeMark(chFrom, chTo, markChange.mark);
+             view.dispatch(tr);
+         }
+-        else if ($from.parent.child($from.index()).isText && $from.index() == $to.index() - ($to.textOffset ? 0 : 1)) {
++        else if ($from.parent.child($from.index()).isText && $from.index() == $to.index() - ($to.textOffset ? 0 : 1) &&
++            !composedOutsideMarks(view, $from.parent.child($from.index()).marks, chFrom, chTo)) {
+             // Both positions in the same text node -- simply insert text
+             let text = $from.parent.textBetween($from.parentOffset, $to.parentOffset);
+             let deflt = () => mkTr(view.state.tr.insertText(text, chFrom, chTo));

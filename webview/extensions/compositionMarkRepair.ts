@@ -4,7 +4,7 @@ import type { Fragment } from '@tiptap/pm/model';
 
 /**
  * Restores the outer mark wrapper Chromium drops when an IME re-commits text unchanged
- * (quirk 16). Trigger = the loss condition: same characters back, fewer marks.
+ * Trigger = the loss condition: same characters back, fewer marks.
  */
 export const CompositionMarkRepair = Extension.create({
   name: 'compositionMarkRepair',

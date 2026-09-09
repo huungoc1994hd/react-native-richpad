@@ -4,7 +4,7 @@ import { revealFocusedCaretNow } from '../scrollCoordinator';
 
 /**
  * Ownership of the caption input session: which field holds it, announcing every
- * change, and the focus transitions into one. See CONTRIBUTING quirks 1, 2 and 10.
+ * change, and the focus transitions into one.
  */
 
 /**
@@ -64,7 +64,7 @@ export const announceCaptionFocus = (element: HTMLElement | null): void => {
 
 /**
  * Blur whatever holds focus, BEFORE dispatching the image selection: it commits an
- * open composition and stops PM painting its selection over the caret (quirk 5).
+ * open composition and stops PM painting its selection over the caret.
  */
 export const releaseDomFocus = (except?: HTMLElement | null): void => {
   const active = document.activeElement;
@@ -75,7 +75,7 @@ export const releaseDomFocus = (except?: HTMLElement | null): void => {
 
 /**
  * Whether the caret is anchored on a live TEXT NODE inside the field — the only
- * anchor WebKit paints in an editable island nested in cE=false (quirk 1).
+ * anchor WebKit paints in an editable island nested in cE=false.
  */
 export function isCaretAttachedIn(field: HTMLElement): boolean {
   const selection = document.getSelection();
@@ -85,7 +85,7 @@ export function isCaretAttachedIn(field: HTMLElement): boolean {
 }
 
 /**
- * Caret to the END, anchored on a text node (quirk 1). An empty field takes offset
+ * Caret to the END, anchored on a text node. An empty field takes offset
  * 0: placed after the <br> holding the line box, WebKit paints it on a second line.
  */
 export function placeCaretAtEnd(field: HTMLElement): void {
@@ -121,7 +121,7 @@ export function placeCaretAtEnd(field: HTMLElement): void {
  */
 export function focusCaptionFieldDirect(field: HTMLElement): boolean {
   // Blur the source FIRST to commit any open composition: WebKit ignores focus()
-  // while the old host still holds marked text (quirk 5).
+  // while the old host still holds marked text.
   const previous = document.activeElement;
   const handingOffFromEditingHost =
     previous instanceof HTMLElement && previous !== field && previous.isContentEditable;
@@ -130,7 +130,7 @@ export function focusCaptionFieldDirect(field: HTMLElement): boolean {
   }
   if (handingOffFromEditingHost) {
     // Handing off between editing hosts leaves UIKit's session pointing at the old
-    // caret rect, so nothing is painted. Toggling cE rebuilds it (quirk 2).
+    // caret rect, so nothing is painted. Toggling cE rebuilds it.
     field.contentEditable = 'false';
     void field.offsetHeight;
     field.contentEditable = 'true';
@@ -163,7 +163,7 @@ export function focusCaptionFieldDirect(field: HTMLElement): boolean {
 
 /**
  * Focus a figure's caption field. Announce BEFORE focusing so RN settles ownership
- * ahead of keyboardWillShow; the focus is always direct (quirk 2).
+ * ahead of keyboardWillShow; the focus is always direct.
  */
 export function focusCaptionField(figureDom: Element | null | undefined): boolean {
   const field = figureDom?.querySelector('figcaption[contenteditable="true"]');

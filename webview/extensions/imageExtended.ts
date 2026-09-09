@@ -1,4 +1,5 @@
 import { Extension, type Attributes } from '@tiptap/core';
+import { Plugin, PluginKey } from '@tiptap/pm/state';
 
 /** Horizontal placement of an image (figure or bare img). */
 export type ImageAlign = 'left' | 'center' | 'right';
@@ -75,6 +76,19 @@ export const ImageAttrs = Extension.create({
         types: ['image'],
         attributes: imageGeometryAttributes('pctWidth'),
       },
+    ];
+  },
+
+  addProseMirrorPlugins() {
+    return [
+      new Plugin({
+        key: new PluginKey('imageReadOnlyClick'),
+        props: {
+          // PM node-selects a clicked atom even when not editable, which paints the
+          // selection outline; a read-only image must stay a plain picture.
+          handleClickOn: (view, _pos, node) => !view.editable && node.type.name === 'image',
+        },
+      }),
     ];
   },
 });

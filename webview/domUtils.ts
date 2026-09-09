@@ -17,7 +17,7 @@ export const isInputSessionLive = (): boolean => {
   return el.isContentEditable || el.tagName === 'INPUT' || el.tagName === 'TEXTAREA';
 };
 
-/** Android WebView (Chromium) vs iOS (WebKit) — several quirks split on it. */
+/** Android WebView (Chromium) vs iOS (WebKit) — several workarounds split on it. */
 export const IS_ANDROID = /android/i.test(navigator.userAgent);
 
 export const getScrollContainer = (): HTMLElement | null =>

@@ -27,7 +27,7 @@ const App = () => {
     bridges: richpadBridges,
     tiptapOptions: {
       // No scrollThreshold/scrollMargin: CaretReveal hands PM's reveal to
-      // scrollCoordinator, and tentap overwrites them with zeros anyway (quirk 20).
+      // scrollCoordinator, and tentap overwrites them with zeros anyway.
       extensions: [
         TrailingNode,
         CaretReveal,

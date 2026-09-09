@@ -154,10 +154,9 @@ if (bgVar !== '#123456') {
 // Deliberately NOT asserted here: that the figure NodeView's ignoreMutation keeps
 // PM from redrawing during a resize drag. PM's DOMObserver never reaches its
 // redraw path under jsdom, so the check passes with the guard removed — a test
-// that cannot fail is worse than none. It stays in the manual checklist, and the
-// reasoning in "Platform quirks", both in CONTRIBUTING.md.
+// that cannot fail is worse than none. It stays in the device checks in CONTRIBUTING.md.
 
-// 0. Every name RN sends config for is one the WebView asks about (quirk 19).
+// 0. Every name RN sends config for is one the WebView asks about.
 //    A missed lookup drops the bridge and its commands in silence.
 const rnBridgeNames = [
   ...fs
@@ -430,7 +429,7 @@ if (chrome !== 44) {
   failures.push(`--editor-chrome is ${chrome}, expected the reported 44px`);
 }
 // jsdom reports an iOS user agent, so the visual-viewport limit must stay unset —
-// reading it there subtracts the keyboard twice (quirk 21).
+// reading it there subtracts the keyboard twice.
 const strip = rootStyle.getPropertyValue('--editor-visible-strip').trim();
 if (strip !== '') {
   failures.push(`--editor-visible-strip is "${strip}" off Android, expected it unset`);

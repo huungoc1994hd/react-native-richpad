@@ -28,7 +28,7 @@ export interface TableSizePickerProps {
 
 /**
  * Bottom sheet for table dimensions, rendered through the SAME-WINDOW portal the
- * popovers use — never an RN Modal, which would fight the closing IME (quirk 11).
+ * popovers use — never an RN Modal, which would fight the closing IME.
  */
 export const TableSizePicker = ({ visible, onClose, onInsert, onClosed }: TableSizePickerProps) => {
   const theme = useRichTheme();

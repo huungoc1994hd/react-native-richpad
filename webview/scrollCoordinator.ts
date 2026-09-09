@@ -5,7 +5,7 @@ import { getCaptionOwner } from './extensions/captionSession';
 
 /**
  * THE owner of caret reveal — typing, the caption, an image finishing its load.
- * Nothing here scrolls for the keyboard; the editing area is sized instead (quirk 21).
+ * Nothing here scrolls for the keyboard; the editing area is sized instead.
  */
 
 /** Breathing room kept below the caret when scrolling it into view (px). */
@@ -18,8 +18,8 @@ const CURSOR_MARGIN_TOP = 10;
 const CURSOR_MARGIN_X = 24;
 
 /**
- * Behavior for every programmatic scroll: an animated one strands the caret on iOS
- * (quirk 23).
+ * Behavior for every programmatic scroll: on iOS an animated one leaves the painted
+ * scroll offset behind the layout one, stranding the caret until a touch scroll.
  */
 export const SCROLL_BEHAVIOR: ScrollBehavior = IS_ANDROID ? 'smooth' : 'auto';
 
@@ -32,7 +32,7 @@ const boxOf = (rect: { top: number; bottom: number; left: number; right: number 
 
 /**
  * Size the SCROLL CONTAINER to the visible strip: min() of two INDEPENDENT limits —
- * the host toolbar only RN can see, and the visual viewport on Android (quirk 21).
+ * the host toolbar only RN can see, and the visual viewport on Android.
  */
 export const syncVisibleHeight = (): void => {
   const root = document.documentElement.style;
@@ -49,7 +49,7 @@ window.visualViewport?.addEventListener('resize', syncVisibleHeight);
 
 /**
  * Viewport-coordinate TOP of the visible strip: WebKit scrolls the document to clear
- * the caret even with nothing to scroll (quirk 4). Overlays clamp to it.
+ * the caret even with nothing to scroll. Overlays clamp to it.
  */
 export const getVisibleTop = (): number => window.visualViewport?.offsetTop ?? 0;
 
@@ -143,7 +143,7 @@ const horizontalScroller = (node: Node | null, container: HTMLElement): HTMLElem
 
 /**
  * Bring the caret inside the visible strip. THE ONE WRITER of caret scroll motion;
- * PM's own reveal is routed here because tentap zeroes its margins (quirk 20).
+ * PM's own reveal is routed here because tentap zeroes its margins.
  */
 export const revealFocusedCaretNow = (scope?: HTMLElement | null, editor?: Editor | null): void => {
   // The user is dragging: they just chose what to look at.

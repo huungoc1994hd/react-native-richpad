@@ -11,7 +11,7 @@ import {
 
 /**
  * In-note search bridge. NAMING RULE: a bridge carrying a tiptapExtension takes that
- * extension's name, and RN must forceName the same string (quirk 19).
+ * extension's name, and RN must forceName the same string.
  */
 export const SearchBridge = new BridgeExtension<
   SearchBridgeState,

@@ -4,7 +4,7 @@ import { revealFocusedCaretNow } from '../scrollCoordinator';
 
 /**
  * Hands ProseMirror's caret reveal to scrollCoordinator, so scroll motion has one
- * owner. A PLUGIN prop, not editorProps, which tentap replaces wholesale (quirk 20).
+ * owner. A PLUGIN prop, not editorProps, which tentap replaces wholesale.
  */
 export const CaretReveal = Extension.create({
   name: 'caretReveal',

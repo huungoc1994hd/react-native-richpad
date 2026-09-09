@@ -49,6 +49,8 @@ export const useImageTapGestures = (editor: Editor, session: ImageSession): void
     const onTouchStart = (e: TouchEvent) => {
       const target = e.target as HTMLElement | null;
       if (!target?.closest?.('.ProseMirror')) return;
+      // Read-only document: a tap on an image is just a tap
+      if (!editor.isEditable) return;
 
       // A tap on the caption field is orchestrated by the figcaption NodeView —
       // leave editable and the handoff alone here.
@@ -127,7 +129,7 @@ export const useImageTapGestures = (editor: Editor, session: ImageSession): void
           if (!current || current.imagePos !== pos) {
             selectImageNodeAt(editor, pos);
           }
-          // Hand the keyboard over in the SAME tick (quirk 5). With no caption in play
+          // Hand the keyboard over in the SAME tick. With no caption in play
           // leave focus alone: a tap meant for resize must not summon the keyboard.
           if (caption) {
             caption.blur();

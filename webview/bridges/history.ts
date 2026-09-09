@@ -4,8 +4,8 @@ import type {} from '@tiptap/extensions';
 import { getCaptionOwner } from '../extensions/captionSession';
 
 /**
- * Replaces tentap's HistoryBridge, swapped inside the array (quirk 7): the stock
- * handler's chain().focus() would steal a focused caption's focus.
+ * Replaces tentap's HistoryBridge inside the array (every bridge sees every message, so
+ * a built-in cannot be wrapped): its chain().focus() would steal the caption's focus.
  */
 export const CaptionAwareHistoryBridge = new BridgeExtension<
   { canUndo: boolean; canRedo: boolean },

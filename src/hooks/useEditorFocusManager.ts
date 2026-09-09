@@ -7,7 +7,7 @@ import { setBlurAckListener, clearBlurAckListener } from '../bridges/customBridg
 const IS_ANDROID = Platform.OS === 'android';
 
 /**
- * Internal. Focuses the hidden native input that raises the Android IME (quirk 10).
+ * Internal. Focuses the hidden native input that raises the Android IME.
  * A LIFO registry: the newest registration owns it, clearing hands ownership back.
  */
 const imeOpenerListeners: (() => void)[] = [];
@@ -31,7 +31,7 @@ let imeOpenInvited = false;
 
 /**
  * Raise the Android IME for input areas that are not the main contenteditable (an
- * image caption): a programmatic DOM focus does not open it there (quirk 10).
+ * image caption): a programmatic DOM focus does not open it there.
  */
 export const openAndroidIme = () => {
   const listener = imeOpenerListeners[imeOpenerListeners.length - 1];
@@ -121,7 +121,7 @@ export const useEditorFocusManager = (editor: EditorBridge | null): EditorFocusM
 
   /**
    * Single entry point for showing or hiding the keyboard: changing IME visibility
-   * mid insets-animation crashes InsetsController (quirk 11).
+   * mid insets-animation crashes InsetsController.
    */
   const runWhenKeyboardIdle = useCallback((action: () => void) => {
     if (keyboardAnimatingRef.current) {
@@ -200,7 +200,7 @@ export const useEditorFocusManager = (editor: EditorBridge | null): EditorFocusM
 
   /**
    * Dismiss in EXACTLY ONE animation beat: blur the WebView, WAIT for its ack, THEN
-   * resign native. Two hide paths in flight make the keyboard bounce (quirk 11).
+   * resign native. Two hide paths in flight make the keyboard bounce.
    */
   const dismissKeyboardReliably = useCallback(() => {
     editorRef.current?.blur();

@@ -1,8 +1,27 @@
 # Changelog
 
-Notable changes per release. Entries reference "Platform quirks", a section of
-[CONTRIBUTING.md](https://github.com/huungoc1994hd/react-native-richpad/blob/main/CONTRIBUTING.md)
-in the repository — it is not part of the published package.
+Notable changes per release. Entries up to 1.0.7 cite numbered platform quirks from the
+[CONTRIBUTING.md of that release](https://github.com/huungoc1994hd/react-native-richpad/blob/v1.0.7/CONTRIBUTING.md).
+
+## 1.0.8
+
+### Changed
+
+- **Text pasted flush against a link joins it only up to the first space**, as typed
+  text does; the rest stays plain.
+- **prosemirror-view 1.42.3.** Its clipboard parser now validates the attributes of
+  pasted content, which closes an XSS vulnerability.
+
+### Fixed
+
+- (Android) The first letter typed on a new line after styled text landed in front of
+  the caret.
+- A read-only editor (`editable: false`) still let images be selected, captions typed
+  into and table handles opened.
+- (Android) The document lagged the screen while a word was being composed, so a
+  command issued mid-word acted on the older text. The bundled prosemirror-view now
+  keeps the nodes the IME is composing in instead of deferring every DOM read to the
+  end of the word.
 
 ## 1.0.7
 

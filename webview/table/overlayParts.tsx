@@ -257,7 +257,7 @@ export const TablePopover = ({
   // detach the menu from its anchor.
   const height = POPOVER_HEIGHT[popover.type];
   // getVisibleBottom, not innerHeight: the host does not always resize the WebView
-  // for the keyboard (quirk 21).
+  // for the keyboard.
   const fitsBelow = popover.y + height <= getVisibleBottom();
   const anchorY = popover.y - 10; // popover.y = tap point + 10
   const flippedBottom = Math.min(
