@@ -204,6 +204,33 @@ if (!roundTripped.includes('<figcaption')) {
   failures.push('figcaption did not survive setContent');
 }
 
+// 2b. Code blocks: the language survives setContent as <code class="language-xx">
+//     and lowlight paints tokens; a block without a language stays uncoloured.
+sendAction({
+  type: 'set-content',
+  payload: { content: '<pre><code class="language-javascript">const a = 1;</code></pre>' },
+});
+await new Promise(r => setTimeout(r, 150));
+const codeHtml = window.document.querySelector('.ProseMirror')?.innerHTML ?? '';
+if (!/<pre[^>]*><code[^>]*class="language-javascript"/.test(codeHtml)) {
+  failures.push('code block language did not survive setContent');
+}
+if (!codeHtml.includes('hljs-keyword')) {
+  failures.push('lowlight did not highlight a javascript code block');
+}
+if (!/<pre[^>]*data-language="javascript"/.test(codeHtml)) {
+  failures.push('the code block language label (data-language) is missing');
+}
+sendAction({ type: 'set-content', payload: { content: '<pre><code>plain text</code></pre>' } });
+await new Promise(r => setTimeout(r, 150));
+const plainHtml = window.document.querySelector('.ProseMirror')?.innerHTML ?? '';
+if (!plainHtml.includes('<pre')) {
+  failures.push('a code block without a language was dropped');
+}
+if (plainHtml.includes('hljs-')) {
+  failures.push('a code block without a language was auto-highlighted');
+}
+
 // 3. EVERY image is a figure (imageNormalizer): a bare <img> from stored
 //    markdown or paste gets wrapped, its geometry lifted onto the figure. The
 //    toggle-without-re-render design rests on this invariant.

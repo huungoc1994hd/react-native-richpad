@@ -18,6 +18,7 @@ export {
   lightTheme,
   darkTheme,
   DEFAULT_LABELS,
+  DEFAULT_CODE_LANGUAGES,
   DEFAULT_HEADING_OPTIONS,
   DEFAULT_FONT_SIZE_OPTIONS,
   DEFAULT_FONT_COLORS,
@@ -39,6 +40,7 @@ export type {
   ResolvedEditorTheme,
   RichEditorLabels,
   HeadingOption,
+  CodeLanguageOption,
 } from './theme/types';
 export type { RichIconName } from './ui/RichIcon';
 export type { RenderIcon } from './context/IconContext';

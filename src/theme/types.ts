@@ -56,6 +56,13 @@ export interface HeadingOption {
   value: 0 | 1 | 2 | 3;
 }
 
+/** A language choice in the bottom-bar code block picker. */
+export interface CodeLanguageOption {
+  label: string;
+  /** highlight.js id as the web editor writes it in the Markdown fence, e.g. 'javascript'. */
+  value: string;
+}
+
 /** All user-facing strings in the React Native toolbars (i18n surface). */
 export interface RichEditorLabels {
   // Top-bar image menu.
@@ -83,6 +90,12 @@ export interface RichEditorLabels {
   italic: string;
   underline: string;
   strikethrough: string;
+  inlineCode: string;
+  codeBlock: string;
+  /** Screen-reader name of the code language picker trigger. */
+  codeLanguageTitle: string;
+  /** First picker entry: no language. */
+  codeLanguagePlain: string;
   orderedList: string;
   bulletList: string;
   selectAll: string;

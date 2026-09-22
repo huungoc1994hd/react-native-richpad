@@ -1,5 +1,6 @@
 import { HistoryBridge, TenTapStartKit } from '@10play/tentap-editor/web';
 import { AlignBridge } from './align';
+import { CodeBlockBridge } from './codeBlock';
 import { ConfigBridge } from './config';
 import { FormatBridge } from './format';
 import { FontSizeBridge } from './fontSize';
@@ -23,4 +24,5 @@ export const richpadBridges = [
   ConfigBridge,
   SearchBridge,
   FormatBridge,
+  CodeBlockBridge,
 ];

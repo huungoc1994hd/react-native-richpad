@@ -10,6 +10,7 @@ import {
   ConfigBridge,
   SearchBridge,
   FormatBridge,
+  CodeBlockBridge,
   setImageToolkitActiveListener,
   clearImageToolkitActiveListener,
   setEditorMountedListener,
@@ -162,6 +163,7 @@ export const useRichEditor = (options: UseRichEditorOptions = {}): RichEditorIns
       ConfigBridge,
       SearchBridge,
       FormatBridge,
+      CodeBlockBridge,
     ].map(ext => {
       if (ext.name === 'placeholder') {
         // showOnlyCurrent:false marks EVERY empty textblock, so CSS can tell an

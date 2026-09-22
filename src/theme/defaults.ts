@@ -1,4 +1,4 @@
-import type { HeadingOption, RichEditorLabels, RichTheme } from './types';
+import type { CodeLanguageOption, HeadingOption, RichEditorLabels, RichTheme } from './types';
 
 export const DEFAULT_LABELS: RichEditorLabels = {
   imagePickLibrary: 'Choose from library',
@@ -19,6 +19,10 @@ export const DEFAULT_LABELS: RichEditorLabels = {
   italic: 'Italic',
   underline: 'Underline',
   strikethrough: 'Strikethrough',
+  inlineCode: 'Inline code',
+  codeBlock: 'Code block',
+  codeLanguageTitle: 'Code language',
+  codeLanguagePlain: 'Plain text',
   orderedList: 'Numbered list',
   bulletList: 'Bulleted list',
   selectAll: 'Select all',
@@ -82,6 +86,28 @@ export const DEFAULT_HEADING_OPTIONS: HeadingOption[] = [
   { label: 'Heading 1', value: 1 },
   { label: 'Heading 2', value: 2 },
   { label: 'Heading 3', value: 3 },
+];
+
+/**
+ * Languages in the bottom-bar code block picker. Every id is in lowlight's `common`
+ * set and matches what the web editor stores in the Markdown fence.
+ */
+export const DEFAULT_CODE_LANGUAGES: CodeLanguageOption[] = [
+  { label: 'JavaScript', value: 'javascript' },
+  { label: 'TypeScript', value: 'typescript' },
+  { label: 'JSON', value: 'json' },
+  { label: 'HTML', value: 'html' },
+  { label: 'CSS', value: 'css' },
+  { label: 'Bash', value: 'bash' },
+  { label: 'SQL', value: 'sql' },
+  { label: 'Python', value: 'python' },
+  { label: 'Java', value: 'java' },
+  { label: 'Kotlin', value: 'kotlin' },
+  { label: 'Swift', value: 'swift' },
+  { label: 'PHP', value: 'php' },
+  { label: 'Go', value: 'go' },
+  { label: 'YAML', value: 'yaml' },
+  { label: 'Markdown', value: 'markdown' },
 ];
 
 export const lightTheme: RichTheme = {

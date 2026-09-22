@@ -277,13 +277,14 @@ interface RichEditorRef {
 
 ### `<RichEditorBottomBar>`
 
-| Prop              | Type                    | Description                                                                                        |
-| ----------------- | ----------------------- | -------------------------------------------------------------------------------------------------- |
-| `stickToKeyboard` | `boolean`               | Pin above the keyboard. Default `true`.                                                            |
-| `bottomOffset`    | `number`                | Extra bottom offset while the keyboard is open (e.g. a tab bar). Default `0`.                      |
-| `features`        | `BottomBarFeatureFlags` | Toggle tools (`taskList`, `color`, `format`, `link`, `list`, `align`, `selectAll`, `clearFormat`). |
-| `items`           | `ToolbarItem[]`         | Custom buttons appended after the built-ins.                                                       |
-| `style`           | `StyleProp<ViewStyle>`  | —                                                                                                  |
+| Prop              | Type                    | Description                                                                                                                                                                                     |
+| ----------------- | ----------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `stickToKeyboard` | `boolean`               | Pin above the keyboard. Default `true`.                                                                                                                                                         |
+| `bottomOffset`    | `number`                | Extra bottom offset while the keyboard is open (e.g. a tab bar). Default `0`.                                                                                                                   |
+| `features`        | `BottomBarFeatureFlags` | Toggle tools (`taskList`, `color`, `format`, `code`, `link`, `list`, `align`, `selectAll`, `clearFormat`). `code` covers the inline code button, the code block button and its language picker. |
+| `items`           | `ToolbarItem[]`         | Custom buttons appended after the built-ins.                                                                                                                                                    |
+| `codeLanguages`   | `CodeLanguageOption[]`  | Languages in the code block picker. Defaults to `DEFAULT_CODE_LANGUAGES` (15 languages; every id is in lowlight's `common` set).                                                                |
+| `style`           | `StyleProp<ViewStyle>`  | —                                                                                                                                                                                               |
 
 ### Toolbar composition
 
