@@ -41,4 +41,6 @@ export interface BottomBarFeatureFlags {
   align?: boolean;
   selectAll?: boolean;
   clearFormat?: boolean;
+  /** Inline code, code block and its language picker. */
+  code?: boolean;
 }

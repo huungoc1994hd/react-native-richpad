@@ -60,6 +60,9 @@ export const BridgeMessageType = {
   Unlink: 'format-unlink',
   // 'select-all' collides with nothing today; prefixed anyway per the rule above.
   SelectAll: 'format-select-all',
+  // CodeBlockBridge (prefixed: tentap's CodeBridge listens for 'toggle-code')
+  ToggleCodeBlock: 'code-block-toggle',
+  SetCodeBlockLanguage: 'code-block-set-language',
 } as const;
 
 export type TextAlignment = 'left' | 'center' | 'right' | 'justify';
@@ -184,6 +187,12 @@ export type FormatBridgeState = {
   selectionText: string;
 };
 
+export type CodeBlockBridgeState = {
+  isCodeBlockActive: boolean;
+  /** `language` attr of the code block at the caret; null outside a block or when unset. */
+  codeBlockLanguage: string | null;
+};
+
 export type AlignBridgeMessage = {
   type: typeof BridgeMessageType.SetAlign;
   payload: TextAlignment;
@@ -240,6 +249,11 @@ export type FormatBridgeMessage =
   | { type: typeof BridgeMessageType.SaveSelection; payload: undefined }
   | { type: typeof BridgeMessageType.Unlink; payload: undefined }
   | { type: typeof BridgeMessageType.SelectAll; payload: undefined };
+
+/** Toggle the block at the caret; SetCodeBlockLanguage with null clears the language. */
+export type CodeBlockBridgeMessage =
+  | { type: typeof BridgeMessageType.ToggleCodeBlock; payload: undefined }
+  | { type: typeof BridgeMessageType.SetCodeBlockLanguage; payload: string | null };
 
 /**
  * Insert at the cursor position SAVED when the overlay opened (ForceBlur): the

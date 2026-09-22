@@ -7,6 +7,7 @@ import { setBottomChromeHeight } from '../hooks/hostChrome';
 import { ToolbarButton } from '../ui/ToolbarButton';
 import { RichIcon, type RichIconName } from '../ui/RichIcon';
 import { PopoverMenu } from '../ui/popover/PopoverMenu';
+import { PopoverMenuItem } from '../ui/popover/PopoverMenuItem';
 import { usePopover } from '../ui/popover/PopoverContext';
 import { ColorMenuContent } from './bottom/ColorMenuContent';
 import { LinkMenuContent } from './bottom/LinkMenuContent';
@@ -17,6 +18,8 @@ import { useRichTheme } from '../context/ThemeContext';
 import type { TextAlignment } from '../protocol';
 import { useLabels } from '../context/LabelsContext';
 import type { ToolbarItem, BottomBarFeatureFlags } from './types';
+import { DEFAULT_CODE_LANGUAGES } from '../theme/defaults';
+import type { CodeLanguageOption } from '../theme/types';
 import { ToolbarDivider } from '../ui/ToolbarDivider';
 import { CustomToolbarItems } from './CustomToolbarItems';
 import { ToolbarTrigger } from '../ui/ToolbarTrigger';
@@ -68,18 +71,21 @@ export interface RichEditorBottomBarProps {
   features?: BottomBarFeatureFlags;
   /** Custom buttons appended after the built-in tools. */
   items?: ToolbarItem[];
+  /** Languages offered by the code block picker. Defaults to DEFAULT_CODE_LANGUAGES. */
+  codeLanguages?: CodeLanguageOption[];
   style?: StyleProp<ViewStyle>;
 }
 
 /**
- * Bottom toolbar: task list, colors, inline formatting, link, lists, alignment,
- * select-all and clear-formatting. Must be rendered inside `<RichEditorProvider>`.
+ * Bottom toolbar: task list, colors, inline formatting, inline code, code block with
+ * its language picker, link, lists, alignment, select-all and clear-formatting. Must be rendered inside `<RichEditorProvider>`.
  */
 export const RichEditorBottomBar = ({
   stickToKeyboard = true,
   bottomOffset = 0,
   features,
   items,
+  codeLanguages,
   style,
 }: RichEditorBottomBarProps) => {
   const { editor, captionFocused, focusManager } = useRichEditorContext();
@@ -112,6 +118,16 @@ export const RichEditorBottomBar = ({
 
   const currentTextColor = editorState.activeColor || '#000000';
   const currentHighlightColor = editorState.activeHighlight;
+
+  const codeLanguageOptions = codeLanguages ?? DEFAULT_CODE_LANGUAGES;
+  // undefined until the WebView's first state; null = a block with no language.
+  const currentCodeLanguage = editorState.codeBlockLanguage ?? null;
+  // The web may store an id outside the list: show it as-is rather than as plain text.
+  const currentCodeLanguageLabel =
+    currentCodeLanguage === null
+      ? labels.codeLanguagePlain
+      : (codeLanguageOptions.find(option => option.value === currentCodeLanguage)?.label ??
+        currentCodeLanguage);
 
   const getAlignIcon = (): RichIconName => {
     switch (editorState.textAlign) {
@@ -298,6 +314,78 @@ export const RichEditorBottomBar = ({
     });
   }
 
+  if (on('code')) {
+    groups.push({
+      key: 'code',
+      node: (
+        <>
+          <ToolbarButton
+            accessibilityLabel={labels.inlineCode}
+            icon="code"
+            isActive={editorState.isCodeActive}
+            onPress={() => editor.toggleCode()}
+          />
+          <ToolbarButton
+            accessibilityLabel={labels.codeBlock}
+            icon="data-object"
+            isActive={editorState.isCodeBlockActive}
+            onPress={() => editor.toggleCodeBlock()}
+          />
+          {/* Language picker: only while the caret is inside a code block */}
+          {editorState.isCodeBlockActive && (
+            <PopoverMenu
+              placement="top"
+              contentWidth={220}
+              trigger={(triggerProps, isOpen) => (
+                <ToolbarTrigger
+                  onPress={triggerProps.onPress}
+                  isActive={isOpen}
+                  accessibilityLabel={labels.codeLanguageTitle}
+                >
+                  <View style={toolbarTargetStyles.row}>
+                    <Text
+                      style={[
+                        styles.codeLanguageLabel,
+                        { color: isOpen ? theme.toolbar.iconActive : theme.toolbar.icon },
+                      ]}
+                    >
+                      {currentCodeLanguageLabel}
+                    </Text>
+                    <RichIcon
+                      name="arrow-drop-down"
+                      size={14}
+                      color={isOpen ? theme.toolbar.iconActive : theme.toolbar.icon}
+                    />
+                  </View>
+                </ToolbarTrigger>
+              )}
+            >
+              <View style={styles.codeLanguageList}>
+                <ScrollView>
+                  <PopoverMenuItem
+                    isActive={currentCodeLanguage === null}
+                    onPress={() => editor.setCodeBlockLanguage(null)}
+                  >
+                    {labels.codeLanguagePlain}
+                  </PopoverMenuItem>
+                  {codeLanguageOptions.map(option => (
+                    <PopoverMenuItem
+                      key={option.value}
+                      isActive={currentCodeLanguage === option.value}
+                      onPress={() => editor.setCodeBlockLanguage(option.value)}
+                    >
+                      {option.label}
+                    </PopoverMenuItem>
+                  ))}
+                </ScrollView>
+              </View>
+            </PopoverMenu>
+          )}
+        </>
+      ),
+    });
+  }
+
   if (on('list')) {
     groups.push({
       key: 'list',
@@ -474,6 +562,13 @@ const styles = StyleSheet.create({
   },
   alignTriggerGap: {
     gap: 4,
+  },
+  codeLanguageLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  codeLanguageList: {
+    maxHeight: 250,
   },
   bar: {
     width: '100%',

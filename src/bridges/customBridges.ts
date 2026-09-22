@@ -14,12 +14,14 @@ import {
   ImageToolkitActiveMessage,
   SearchBridgeMessage,
   FormatBridgeMessage,
+  CodeBlockBridgeMessage,
   BlurAckMessage,
   AlignBridgeState,
   FontSizeBridgeState,
   TableBridgeState,
   SearchBridgeState,
   FormatBridgeState,
+  CodeBlockBridgeState,
 } from '../protocol';
 
 /**
@@ -75,6 +77,9 @@ declare module '@10play/tentap-editor' {
      * in-field select-all belongs to the OS text menu.
      */
     selectAll: () => void;
+    toggleCodeBlock: () => void;
+    /** null clears the language (plain text). */
+    setCodeBlockLanguage: (language: string | null) => void;
   }
   interface BridgeState
     extends
@@ -82,7 +87,8 @@ declare module '@10play/tentap-editor' {
       FontSizeBridgeState,
       TableBridgeState,
       SearchBridgeState,
-      FormatBridgeState {}
+      FormatBridgeState,
+      CodeBlockBridgeState {}
 }
 
 export const AlignBridge = new BridgeExtension<
@@ -291,6 +297,27 @@ export const FormatBridge = new BridgeExtension<
         sendBridgeMessage({ type: BridgeMessageType.SaveSelection, payload: undefined }),
       unlink: () => sendBridgeMessage({ type: BridgeMessageType.Unlink, payload: undefined }),
       selectAll: () => sendBridgeMessage({ type: BridgeMessageType.SelectAll, payload: undefined }),
+    };
+  },
+});
+
+export const CodeBlockBridge = new BridgeExtension<
+  CodeBlockBridgeState,
+  {
+    toggleCodeBlock: () => void;
+    setCodeBlockLanguage: (language: string | null) => void;
+  },
+  CodeBlockBridgeMessage
+>({
+  // MUST be 'codeBlock': the WebView side carries the CodeBlock tiptap extension
+  // (same rule as FontSizeBridge).
+  forceName: 'codeBlock',
+  extendEditorInstance: sendBridgeMessage => {
+    return {
+      toggleCodeBlock: () =>
+        sendBridgeMessage({ type: BridgeMessageType.ToggleCodeBlock, payload: undefined }),
+      setCodeBlockLanguage: language =>
+        sendBridgeMessage({ type: BridgeMessageType.SetCodeBlockLanguage, payload: language }),
     };
   },
 });

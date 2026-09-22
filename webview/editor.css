@@ -173,6 +173,76 @@ ul[data-type='taskList'] li > div {
   flex: 1 1 auto;
 }
 
+.ProseMirror pre {
+  background: var(--editor-table-header-bg);
+  border: 1px solid var(--editor-table-border-color);
+  border-radius: 6px;
+  padding: 10px 12px;
+  font-family: ui-monospace, Menlo, Consolas, monospace;
+  font-size: 0.9em;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.ProseMirror pre code {
+  background: none;
+  padding: 0;
+  color: inherit;
+  font-size: inherit;
+}
+/* The block's language, echoed by LabeledCodeBlock as data-language */
+.ProseMirror pre[data-language]::before {
+  content: attr(data-language);
+  display: block;
+  margin: -4px 0 6px;
+  font-family: var(--editor-font-family);
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--editor-muted);
+}
+/* lowlight tokens, GitHub-light palette */
+.ProseMirror pre .hljs-comment,
+.ProseMirror pre .hljs-quote {
+  color: #6a737d;
+  font-style: italic;
+}
+.ProseMirror pre .hljs-keyword,
+.ProseMirror pre .hljs-selector-tag,
+.ProseMirror pre .hljs-literal,
+.ProseMirror pre .hljs-built_in {
+  color: #d73a49;
+}
+.ProseMirror pre .hljs-string,
+.ProseMirror pre .hljs-regexp,
+.ProseMirror pre .hljs-addition {
+  color: #032f62;
+}
+.ProseMirror pre .hljs-number,
+.ProseMirror pre .hljs-attr,
+.ProseMirror pre .hljs-symbol,
+.ProseMirror pre .hljs-variable,
+.ProseMirror pre .hljs-template-variable {
+  color: #005cc5;
+}
+.ProseMirror pre .hljs-title,
+.ProseMirror pre .hljs-section,
+.ProseMirror pre .hljs-name {
+  color: #6f42c1;
+}
+.ProseMirror pre .hljs-type,
+.ProseMirror pre .hljs-tag {
+  color: #22863a;
+}
+.ProseMirror pre .hljs-deletion {
+  color: #b31d28;
+}
+.ProseMirror pre .hljs-emphasis {
+  font-style: italic;
+}
+.ProseMirror pre .hljs-strong {
+  font-weight: 700;
+}
+
 .ProseMirror img {
   display: block; /* so margin:auto centering / alignment works */
   height: auto;

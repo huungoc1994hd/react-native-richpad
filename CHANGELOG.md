@@ -3,6 +3,20 @@
 Notable changes per release. Entries up to 1.0.7 cite numbered platform quirks from the
 [CONTRIBUTING.md of that release](https://github.com/huungoc1994hd/react-native-richpad/blob/v1.0.7/CONTRIBUTING.md).
 
+## 1.0.9
+
+### Added
+
+- **Code blocks**, highlighted with lowlight (the 37 grammars of its `common` set). The
+  language round-trips as `<pre><code class="language-xx">`; Enter three times, or the
+  down arrow on the last line, leaves the block. A block without a language is not
+  auto-detected.
+- The block shows its language as a small label in its top-left corner.
+- Bottom bar: a new **code** group after bold/italic/underline/strikethrough with an
+  **inline code** button, a **code block** button and, inside a block, a **language
+  picker** (`codeLanguages` prop, 15 languages by default). The group sits behind the
+  new `code` feature flag.
+
 ## 1.0.8
 
 ### Changed

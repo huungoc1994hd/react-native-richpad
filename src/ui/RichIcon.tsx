@@ -34,7 +34,9 @@ export type RichIconName =
   | 'format-align-justify'
   | 'select-all'
   | 'format-clear'
-  | 'check';
+  | 'check'
+  | 'code'
+  | 'data-object';
 
 export interface RichIconProps {
   name: RichIconName;
