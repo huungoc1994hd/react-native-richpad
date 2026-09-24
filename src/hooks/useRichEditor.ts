@@ -66,7 +66,10 @@ export interface UseRichEditorOptions {
   headingOptions?: HeadingOption[];
   /** Runtime size limits: image/table minimum widths. */
   metrics?: EditorMetrics;
+  /** The bridge exists; the WebView may still be loading (see onMounted). */
   onReady?: (editor: EditorBridge) => void;
+  /** The document has mounted in the WebView and can take focus; again after a renderer-crash remount. */
+  onMounted?: () => void;
   /** Called (leading + trailing debounce) with the latest HTML whenever content changes. */
   onChange?: (html: string) => void;
   onFocusChanged?: (focused: boolean) => void;
@@ -128,6 +131,7 @@ export const useRichEditor = (options: UseRichEditorOptions = {}): RichEditorIns
     headingOptions,
     metrics,
     onReady,
+    onMounted,
     onChange,
     onFocusChanged,
     onStateChange,
@@ -205,12 +209,19 @@ export const useRichEditor = (options: UseRichEditorOptions = {}): RichEditorIns
   ownershipRef.current = ownership;
 
   const callbacksRef = useRef({
+    onMounted,
     onChange,
     onFocusChanged,
     onStateChange,
     onImageInteractionChange,
   });
-  callbacksRef.current = { onChange, onFocusChanged, onStateChange, onImageInteractionChange };
+  callbacksRef.current = {
+    onMounted,
+    onChange,
+    onFocusChanged,
+    onStateChange,
+    onImageInteractionChange,
+  };
 
   const configRef = useRef(webViewConfig);
   configRef.current = webViewConfig;
@@ -314,6 +325,7 @@ export const useRichEditor = (options: UseRichEditorOptions = {}): RichEditorIns
         didAutofocusRef.current = true;
         focusManagerRef.current?.requestFocus('start');
       }
+      callbacksRef.current.onMounted?.();
     };
     setEditorMountedListener(handleEditorMounted);
     return () => clearEditorMountedListener(handleEditorMounted);

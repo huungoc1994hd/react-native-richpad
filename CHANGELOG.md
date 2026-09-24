@@ -3,6 +3,15 @@
 Notable changes per release. Entries up to 1.0.7 cite numbered platform quirks from the
 [CONTRIBUTING.md of that release](https://github.com/huungoc1994hd/react-native-richpad/blob/v1.0.7/CONTRIBUTING.md).
 
+## 1.0.10
+
+### Added
+
+- `onMounted` option on `useRichEditor`: fires when the editor document has mounted in
+  the WebView and can take focus (again after a renderer-crash remount), so a host can
+  hold its own loading state until then. `onReady` keeps firing earlier, when the bridge
+  exists.
+
 ## 1.0.9
 
 ### Added
