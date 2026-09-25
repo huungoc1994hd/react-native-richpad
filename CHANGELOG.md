@@ -3,6 +3,14 @@
 Notable changes per release. Entries up to 1.0.7 cite numbered platform quirks from the
 [CONTRIBUTING.md of that release](https://github.com/huungoc1994hd/react-native-richpad/blob/v1.0.7/CONTRIBUTING.md).
 
+## 1.0.11
+
+### Fixed
+
+- (Android) Enter three times at the end of a code block now leaves the block, as it
+  already did on iOS. prosemirror-view drops Enter key events on Chrome Android, so the
+  exit is also taken when the newline arrives as text.
+
 ## 1.0.10
 
 ### Added

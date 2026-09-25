@@ -6,6 +6,7 @@ import { useTenTap } from '@10play/tentap-editor/web';
 import { TableHandles } from './TableHandles';
 import { TrailingNode } from './TrailingNode';
 import { LeadingEmptyParagraphBackspace } from './extensions/leadingEmptyParagraphBackspace';
+import { CodeBlockTripleEnterExit } from './extensions/codeBlockTripleEnterExit';
 import { CompositionMarkRepair } from './extensions/compositionMarkRepair';
 import { CaretReveal } from './extensions/caretReveal';
 import { ErrorBoundary } from './ErrorBoundary';
@@ -32,6 +33,7 @@ const App = () => {
         TrailingNode,
         CaretReveal,
         LeadingEmptyParagraphBackspace,
+        CodeBlockTripleEnterExit,
         CompositionMarkRepair,
         ImageAttrs,
         ImageNormalizer,
